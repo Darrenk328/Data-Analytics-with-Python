@@ -56,7 +56,7 @@ def build_metars(manifest: dict) -> None:
     print(f"  metars     {out.stat().st_size / 1e6:5.2f} MB")
 
 
-def build_climate(manifest: dict) -> None:
+def build_climate(manifest: dict, with_cmip6: bool = True) -> None:
     """Fetch ERA5 history and CMIP6 projections for the showcase airports."""
     from skyscope.data.store import get_store
 
@@ -75,8 +75,16 @@ def build_climate(manifest: dict) -> None:
             ident = row["ident"]
             for attempt in range(3):
                 try:
-                    era = history.fetch_era5(row, target_dir=climate_dir)
-                    cm = projections.fetch_cmip6(row, target_dir=climate_dir)
+                    era_file = climate_dir / f"era5_{ident}.npz"
+                    era = (history.load_file(ident, era_file, "snapshot") if era_file.exists()
+                           else history.fetch_era5(row, target_dir=climate_dir))
+                    cm_file = climate_dir / f"cmip6_{ident}.npz"
+                    if cm_file.exists():
+                        cm = projections.load_file(ident, cm_file, "snapshot")
+                    elif with_cmip6:
+                        cm = projections.fetch_cmip6(row, target_dir=climate_dir)
+                    else:
+                        cm = None
                     break
                 except sources.FetchError as exc:
                     print(f"  ! {code}: {exc}; retrying")
@@ -84,7 +92,8 @@ def build_climate(manifest: dict) -> None:
             else:
                 continue
             idents.append(ident)
-            print(f"  {group:<8} {code} {ident:<5} ERA5 {len(era.dates):>6} days · CMIP6 {len(cm.models)} models")
+            print(f"  {group:<8} {code} {ident:<5} ERA5 {len(era.dates):>6} days · "
+                  f"CMIP6 {len(cm.models) if cm else 0} models", flush=True)
             time.sleep(1)  # be gentle with the free API
     manifest["climate_airports"] = idents
     manifest["fetched"]["climate"] = _now()
@@ -94,6 +103,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--no-climate", action="store_true", help="skip climate downloads")
     parser.add_argument("--only-climate", action="store_true", help="only rebuild climate data")
+    parser.add_argument("--no-cmip6", action="store_true",
+                        help="skip CMIP6 downloads (rate-limited; existing files are kept)")
     args = parser.parse_args()
 
     SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
@@ -106,7 +117,7 @@ def main() -> None:
         build_metars(manifest)
     if not args.no_climate:
         print("Climate (ERA5 + CMIP6):")
-        build_climate(manifest)
+        build_climate(manifest, with_cmip6=not args.no_cmip6)
     (SNAPSHOT_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2))
     total = sum(p.stat().st_size for p in SNAPSHOT_DIR.rglob("*") if p.is_file())
     print(f"Snapshot size: {total / 1e6:.1f} MB")

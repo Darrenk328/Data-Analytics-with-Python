@@ -303,7 +303,43 @@ def cmd_open(ctx: Context, args: list[str]) -> CommandResult:
 
 def _climate_card_line(ctx: Context, rec: dict[str, Any]):
     """(renderable, utc offset) from cached climate only — never fetches on the card."""
-    return None, None
+    from skyscope.climate.history import load_era5
+    from skyscope.climate.metrics import heat_summary
+    from skyscope.views.heat_view import climate_line
+
+    era = load_era5(rec, allow_fetch=False)
+    if era is None:
+        return Text(f"  Not downloaded yet — heat {rec['code']} fetches 85 years of history.", style="muted"), None
+    return climate_line(heat_summary(era.dates, era.tmax), ctx.units), era.utc_offset_s
+
+
+def _climate(ctx: Context, rec: dict[str, Any], projections: bool = True):
+    """(Era5, Cmip6 | None, note) — fetching on demand with a spinner, cached afterwards."""
+    from skyscope.climate.history import load_era5
+    from skyscope.climate.projections import load_cmip6
+    from skyscope.data.sources import FetchError, OfflineError
+
+    if rec.get("elevation_ft") is None and rec["type"] in ("heliport", "closed"):
+        raise UserError(f"no climate analysis for {rec['code']} ({rec['type']})")
+    try:
+        with ctx.spinner(f"Downloading 85 years of daily highs for {rec['code']} (once)…"):
+            era = load_era5(rec)
+    except (FetchError, OfflineError) as exc:
+        raise UserError(f"climate history for {rec['code']} isn't cached and can't be downloaded ({exc})",
+                        "showcase airports work offline: heat PHX, heat DXB, heat DEN …") from exc
+    if era is None:
+        raise UserError(f"climate history for {rec['code']} isn't cached (offline)",
+                        "showcase airports work offline: heat PHX, heat DXB, heat DEN …")
+    cm, note = None, None
+    if projections:
+        try:
+            with ctx.spinner(f"Downloading CMIP6 projections for {rec['code']} (once)…"):
+                cm = load_cmip6(rec)
+            if cm is None:
+                note = "Projections not cached (offline) — showing history only."
+        except (FetchError, OfflineError, KeyError, ValueError) as exc:
+            note = f"Projections unavailable ({exc}) — showing history only."
+    return era, cm, note
 
 
 @command("wx", "Decoded METAR + TAF", "wx [code]", ["wx KPHX", "wx"], aliases=("weather", "metar"))
@@ -421,11 +457,79 @@ def cmd_takeoff(ctx: Context, args: list[str]) -> CommandResult:
 
 def _record_high(ctx: Context, rec: dict[str, Any]) -> float | None:
     """Record daily max from cached climate data (None if not cached)."""
-    return None
+    import numpy as np
+
+    from skyscope.climate.history import load_era5
+
+    era = load_era5(rec, allow_fetch=False)
+    return None if era is None else float(np.nanmax(era.tmax))
 
 
 def _decades(ctx: Context, rec: dict[str, Any], ac, runway_m: float):
-    raise UserError("climate data isn't available yet")
+    """Restricted days/yr per decade + projection (view, data)."""
+    from skyscope.climate.metrics import restricted_days
+    from skyscope.climate.projections import delta_projection
+    from skyscope.views.takeoff_view import decades_view
+
+    era, cm, note = _climate(ctx, rec)
+    projected = delta_projection(era.dates, era.tmax, cm) if cm is not None else None
+    st = restricted_days(ac, rec["elevation_ft"], runway_m, era.dates, era.tmax, projected)
+    rows: list[tuple[str, float, float | None, float | None]] = [(d, v, None, None) for d, v in st.decades]
+    rows.append(("1996–2025", st.recent, None, None))
+    med, rng = st.projected_median, st.projected_range
+    if med is not None and rng is not None:
+        rows.append(("2031–2050 proj.", med, rng[0], rng[1]))
+    early = next((v for d, v in st.decades if d.startswith("196")), None)
+    msg = f"A full {ac.name} at {rec['code']}: ≈{st.recent:.0f} restricted days/yr in 1996–2025"
+    if early is not None and early > 0.5:
+        msg += f" (×{st.recent / early:.1f} vs the 1960s)"
+    elif early is not None:
+        msg += f" (vs ≈{early:.0f} in the 1960s)"
+    if med is not None:
+        msg += f"; models project ≈{med:.0f}/yr by 2031–2050"
+        if st.recent > 0.5:
+            msg += f" (≈{med / st.recent:.1f}×)"
+    msg += "."
+    caveat = ("Uses each day's ERA5 maximum temperature at standard pressure — the worst departure of "
+              "the day; cooler-hour departures fare better. Projections: CMIP6 HighResMIP, high-emissions, "
+              "to 2050, multi-model median with min–max range.")
+    if note:
+        caveat = note + " " + caveat
+    if st.mean_loss_kg:
+        caveat = (f"On restricted days in 1996–2025 the average offload was ≈{st.mean_loss_kg:,.0f} kg "
+                  f"(≈{st.mean_loss_kg / ctx.settings.kg_per_passenger:.0f} passengers). ") + caveat
+    data = {"decades": dict(st.decades), "recent_1996_2025": round(st.recent, 1),
+            "projected_2031_2050": {"median": med, "range": rng, "models": st.projected},
+            "mean_offload_kg": round(st.mean_loss_kg), "estimate": True}
+    return decades_view(rows, msg, caveat), data
+
+
+@command("heat", "85 years of heat history + 2050 projection", "heat [code]",
+         ["heat PHX", "heat DXB", "heat"], aliases=("climate",), category="Heat & takeoff")
+def cmd_heat(ctx: Context, args: list[str]) -> CommandResult:
+    import numpy as np
+
+    from skyscope.climate.metrics import add_projection, heat_summary
+    from skyscope.views.heat_view import heat_view
+
+    pos, _ = parse_args(args, {})
+    idx = resolve_airport(ctx, pos[0] if pos else None)
+    ctx.airport_idx = idx
+    rec = airport_record(ctx, idx)
+    era, cm, note = _climate(ctx, rec)
+    if np.isnan(era.tmax).all():
+        raise UserError(f"no temperature history for {rec['code']}")
+    summary = heat_summary(era.dates, era.tmax)
+    if cm is not None:
+        add_projection(summary, cm.dates, cm.tmax, cm.models)
+    data = {"airport": rec["code"], "warm_season_months": summary.months,
+            "warming_c_1951_1980_to_1996_2025": summary.warming,
+            "trend_c_per_decade": summary.trend.slope_per_decade, "trend_t": summary.trend.t_stat,
+            "record_c": summary.record_c, "record_date": summary.record_date,
+            "warm_season_tmax_by_year": summary.warm, "projected_warm_season_median": summary.projected_warm,
+            "projected_warming_by_model": summary.projected_warming, "source": "ERA5 via Open-Meteo; CMIP6 HighResMIP"}
+    return CommandResult(heat_view(rec["code"], rec["name"], summary, ctx.units, note), data=data,
+                         name=f"heat_{rec['code']}")
 
 
 @command("aircraft", "List aircraft types, or set the session default", "aircraft [id]",
