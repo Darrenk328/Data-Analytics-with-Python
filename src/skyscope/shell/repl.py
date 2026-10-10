@@ -106,6 +106,7 @@ def run_shell(ctx: Context) -> None:
         history = InMemoryHistory()
     session: PromptSession[str] = PromptSession(history=history, completer=SkyCompleter(ctx),
                                                 complete_while_typing=False)
+    _wait_for_width()
     run_line(ctx, "__banner__")
     while True:
         label = ctx.prompt_label()
@@ -124,6 +125,15 @@ def run_shell(ctx: Context) -> None:
         log.info("ran %r in %.2fs", line, time.perf_counter() - t0)
         ctx.console.print()
     ctx.console.print(Text("Clear skies. ✈", style="muted"))
+
+
+def _wait_for_width(min_cols: int = 40, timeout_s: float = 1.0) -> None:
+    """Browser terminals (e.g. ttyd) start at a tiny size and resize a moment later; wait for it."""
+    import shutil
+
+    deadline = time.monotonic() + timeout_s
+    while shutil.get_terminal_size((80, 24)).columns < min_cols and time.monotonic() < deadline:
+        time.sleep(0.05)
 
 
 def _escape(text: str) -> str:
