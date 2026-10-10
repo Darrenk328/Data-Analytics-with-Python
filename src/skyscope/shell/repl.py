@@ -94,7 +94,6 @@ def _json_default(value: Any) -> Any:
 def run_shell(ctx: Context) -> None:
     """Interactive loop with history, completion and a context-aware prompt."""
     from prompt_toolkit import PromptSession
-    from prompt_toolkit.formatted_text import HTML
     from prompt_toolkit.history import FileHistory, InMemoryHistory
 
     from skyscope.shell.completer import SkyCompleter
@@ -109,9 +108,8 @@ def run_shell(ctx: Context) -> None:
     _wait_for_width()
     run_line(ctx, "__banner__")
     while True:
-        label = ctx.prompt_label()
         try:
-            line = session.prompt(HTML(f"<b>skyscope</b> <ansicyan>[{_escape(label)}]</ansicyan> › "))
+            line = session.prompt(_prompt_html(ctx))
         except KeyboardInterrupt:
             continue
         except EOFError:
@@ -125,6 +123,18 @@ def run_shell(ctx: Context) -> None:
         log.info("ran %r in %.2fs", line, time.perf_counter() - t0)
         ctx.console.print()
     ctx.console.print(Text("Clear skies. ✈", style="muted"))
+
+
+def _prompt_html(ctx: Context):
+    """skyscope  PHX  737-800 ›  — airport in sky blue, aircraft as an orange badge."""
+    from prompt_toolkit.formatted_text import HTML
+
+    from skyscope.views.theme import SKY, SUN
+
+    code, aircraft = ctx.prompt_parts()
+    airport = f' <style fg="{SKY}"><b>{_escape(code)}</b></style>' if code else ""
+    badge = f' <style bg="{SUN}" fg="#000000"><b> {_escape(aircraft)} </b></style>'
+    return HTML(f"<b>skyscope</b>{airport}{badge} › ")
 
 
 def _wait_for_width(min_cols: int = 40, timeout_s: float = 1.0) -> None:

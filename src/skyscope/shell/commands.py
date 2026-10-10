@@ -212,7 +212,39 @@ def cmd_quit(ctx: Context, args: list[str]) -> CommandResult:  # handled by the 
 def cmd_banner(ctx: Context, args: list[str]) -> CommandResult:
     from skyscope.views.launch_view import launch_view
 
-    return CommandResult(launch_view(ctx.store.size, None, None))
+    story = _launch_story(ctx)
+    note = None
+    if story:
+        from skyscope.views import format as fmt
+
+        note = ("live weather " if story["origin"] == "live" else "weather ") + fmt.age(story["observed"])
+    return CommandResult(launch_view(ctx.store.size, note, story))
+
+
+def _launch_story(ctx: Context, code: str = "PHX") -> dict[str, Any] | None:
+    """Live headline for the launch screen (None on any problem — the panel is then skipped)."""
+    try:
+        from skyscope.data.weather import get_metar
+        from skyscope.perf.takeoff import evaluate
+        from skyscope.views import format as fmt
+
+        rec = ctx.store.lookup(code)
+        ac = _aircraft(ctx, None)
+        wx = get_metar(rec["station"])
+        m = wx.metar
+        if m is None or m.temp_c is None or not rec["perf_ok"]:
+            return None
+        res = evaluate(ac, rec["elevation_ft"], rec["longest_paved_ft"] / fmt.FT_PER_M, m.temp_c,
+                       m.altimeter_inhg, ctx.settings.kg_per_passenger)
+        from skyscope.data.weather import load_bulk
+
+        bulk = load_bulk() if wx.origin == "bulk" else None
+        return {"city": rec["municipality"] or rec["name"], "code": rec["code"], "temp_c": m.temp_c,
+                "aircraft": ac.id, "status": res.status, "margin_c": res.margin_c,
+                "passengers": res.passengers, "station": m.station, "observed": m.observed,
+                "origin": wx.origin, "snapshot": bool(bulk and bulk.origin == "snapshot")}
+    except Exception:
+        return None
 
 
 # --------------------------------------------------------------------------- airport + weather
@@ -280,7 +312,7 @@ def cmd_open(ctx: Context, args: list[str]) -> CommandResult:
     from skyscope.views import format as fmt
     from skyscope.views.airport_card import card
     from skyscope.views.takeoff_view import threshold_text
-    from skyscope.views.theme import STATUS_STYLE
+    from skyscope.views.theme import STATUS_STYLE, badge
 
     pos, _ = parse_args(args, {})
     idx = resolve_airport(ctx, pos[0] if pos else None)
@@ -299,23 +331,24 @@ def cmd_open(ctx: Context, args: list[str]) -> CommandResult:
     if rec["perf_ok"] and m is not None and m.temp_c is not None:
         res = evaluate(ac, rec["elevation_ft"], rec["longest_paved_ft"] / fmt.FT_PER_M, m.temp_c,
                        m.altimeter_inhg, ctx.settings.kg_per_passenger)
-        line = Text("  ")
-        line.append(res.status, style=STATUS_STYLE[res.status])
-        line.append(f"  full {ac.name}{' ≈' if ac.approx else ''} at {fmt.temp(m.temp_c, ctx.units)}: ")
+        line = Text()
+        line.append_text(badge(res.status))
+        line.append(f"  At {fmt.temp(m.temp_c, ctx.units)}: ")
         line.append("no restriction" if res.status == "OK" else
-                    f"≈{fmt.mass(res.restriction_kg, ctx.units)} / ≈{res.passengers:,.0f} passengers offloaded")
-        line.append(f" · restriction begins at {threshold_text(res.threshold, ctx.units)} (estimate)", style="muted")
+                    f"≈{fmt.mass(res.restriction_kg, ctx.units)} / ≈{res.passengers:,.0f} passengers offloaded",
+                    style=STATUS_STYLE[res.status])
+        line.append(f"\nRestriction begins at ≈{threshold_text(res.threshold, ctx.units)}", style="est")
         data["takeoff"] = res.to_dict()
     elif not rec["perf_ok"]:
         why = ("no paved runway" if rec.get("longest_paved_ft") is None else "no elevation on record") \
             if rec["type"] not in ("heliport", "seaplane_base", "balloonport", "closed") \
             else f"it's a {rec['type'].replace('_', ' ')}"
-        line = Text(f"  Not modelled here ({why}).", style="muted")
+        line = Text(f"Not modelled here ({why}).", style="muted")
     else:
-        line = Text("  No live temperature — try: takeoff " + rec["code"] + " --temp 35", style="muted")
+        line = Text("No live temperature — try: takeoff " + rec["code"] + " --temp 35", style="muted")
     climate_line, offset = _climate_card_line(ctx, rec)
     view = card(rec, wx, runways, active.ident if active else None, line, climate_line, ctx.units,
-                offset, _da(rec, m))
+                offset, _da(rec, m), f"full {ac.name}{' ≈' if ac.approx else ''}")
     return CommandResult(view, data=data, name=f"airport_{rec['code']}")
 
 
@@ -381,10 +414,7 @@ def cmd_wx(ctx: Context, args: list[str]) -> CommandResult:
 @command("runways", "Runways with headwind/crosswind", "runways [code]", ["runways PHX", "rwy"],
          aliases=("rwy",))
 def cmd_runways(ctx: Context, args: list[str]) -> CommandResult:
-    from rich.console import Group
-
-    from skyscope.views.airport_card import runways_table
-    from skyscope.views.theme import hint_line
+    from skyscope.views.airport_card import runways_view
 
     pos, _ = parse_args(args, {})
     idx = resolve_airport(ctx, pos[0] if pos else None)
@@ -392,13 +422,12 @@ def cmd_runways(ctx: Context, args: list[str]) -> CommandResult:
     rec = airport_record(ctx, idx)
     m = _wx(ctx, rec).metar
     runways = _runway_records(ctx, rec["ident"])
-    head = Text(f"Runways at {rec['code']} · wind "
-                + (f"{m.wind_dir:03.0f}° {m.wind_kt:.0f} kt" if m and m.wind_dir is not None and m.wind_kt
-                   else "calm/variable" if m else "unknown"), style="bold")
-    view = Group(head, runways_table(runways, ctx.units, None, (m.wind_dir, m.wind_kt) if m else (None, None)),
-                 Text("+ headwind / − tailwind, then crosswind (kt)", style="muted"),
-                 hint_line([f"takeoff {rec['code']}", f"takeoff {rec['code']} --runway {runways[0]['le_ident']}"
-                            if runways else "", f"wx {rec['code']}"]))
+    wind_text = (f"{m.wind_dir:03.0f}° {m.wind_kt:.0f} kt" if m and m.wind_dir is not None and m.wind_kt
+                 else "calm/variable" if m else "unknown")
+    hints = [f"takeoff {rec['code']}", f"takeoff {rec['code']} --runway {runways[0]['le_ident']}"
+             if runways else "", f"wx {rec['code']}"]
+    view = runways_view(rec["code"], wind_text, runways, ctx.units,
+                        (m.wind_dir, m.wind_kt) if m else (None, None), hints)
     return CommandResult(view, data=[{k: r[k] for k in ("name", "length_ft", "width_ft", "surface",
                                                          "closed", "le_heading", "he_heading")} for r in runways],
                          name="runways")
@@ -481,8 +510,8 @@ def cmd_takeoff(ctx: Context, args: list[str]) -> CommandResult:
             extra = Group(extra, msg)
     code = rec["code"]
     hints = [f"takeoff {code} --sweep", f"takeoff {code} --decades", f"heat {code}"]
-    view = takeoff_page(headline(code, ac, res, ctx.units, today),
-                        verdict_panel(code, ac, res, rwy_name, ctx.units, note, today),
+    head = headline(code, ac, res, ctx.units, today)
+    view = takeoff_page(head, verdict_panel(code, ac, res, rwy_name, ctx.units, note, today, head),
                         all_aircraft_table(rows, ctx.units), extra, hints)
     return CommandResult(view, data=data, name=f"takeoff_{code}")
 
@@ -560,11 +589,9 @@ def cmd_heat(ctx: Context, args: list[str]) -> CommandResult:
             "record_c": summary.record_c, "record_date": summary.record_date,
             "warm_season_tmax_by_year": summary.warm, "projected_warm_season_median": summary.projected_warm,
             "projected_warming_by_model": summary.projected_warming, "source": "ERA5 via Open-Meteo; CMIP6 HighResMIP"}
-    view = heat_view(rec["code"], rec["name"], summary, ctx.units, note)
+    msg = None
     if opts.get("plot"):
         import calendar
-
-        from rich.console import Group
 
         from skyscope.plots import plot_heat
 
@@ -572,7 +599,7 @@ def cmd_heat(ctx: Context, args: list[str]) -> CommandResult:
         msg, data["plot"] = _save_plot(lambda: plot_heat(
             rec["code"], rec["name"], summary.warm, summary.baseline, summary.trend.slope_per_decade,
             summary.projected_warm, months, ctx.units))
-        view = Group(view, msg)
+    view = heat_view(rec["code"], rec["name"], summary, ctx.units, note, msg)
     return CommandResult(view, data=data, name=f"heat_{rec['code']}")
 
 
@@ -592,22 +619,23 @@ def cmd_aircraft(ctx: Context, args: list[str]) -> CommandResult:
         return CommandResult(Text(f"Default aircraft set to {ac.name}{' (≈ some inputs approximate)' if ac.approx else ''}.",
                                   style="green"), data={"aircraft": ac.id})
     table = Table(box=None, padding=(0, 1), header_style="bold", pad_edge=False)
-    for col, just in (("ID", "left"), ("Name", "left"), ("MTOW", "right"), ("Max payload", "right"),
-                      ("Field length*", "right"), ("Src", "left")):
+    for col, just in (("ID", "left"), ("Name", "left"), ("MTOW", "right"), ("Payload", "right"),
+                      ("Field*", "right"), ("Source", "left")):
         table.add_column(col, justify=just, no_wrap=True)
     data = []
     for ac in load_aircraft():
         star = "◀" if ac.id == ctx.settings.aircraft else ""
         table.add_row(Text(ac.id, style="code"), f"{ac.name} {star}", fmt.mass(ac.mtow_kg, ctx.units),
                       fmt.mass(ac.max_payload_kg, ctx.units), f"{ac.tofl_ref_m:,.0f} m",
-                      "≈ approx" if ac.approx else "sourced")
+                      Text("≈ approx", style="est") if ac.approx else Text("✓ doc", style="good"))
         data.append({"id": ac.id, "name": ac.name, "mtow_kg": ac.mtow_kg, "max_payload_kg": ac.max_payload_kg,
                      "tofl_ref_m": ac.tofl_ref_m, "approx": ac.approx, "source": ac.source})
-    from skyscope.views.theme import hint_line
+    from skyscope.views.theme import page, panel
 
-    view = Group(table, Text("* takeoff field length at MTOW, sea level, ISA. ≈ = a value could not be "
-                             "confirmed in a manufacturer document (sources in perf/aircraft.toml).", style="muted"),
-                 hint_line(["aircraft A320neo", "takeoff PHX"]))
+    view = page(panel(Group(table, Text(""), Text(
+        "* takeoff field length at MTOW, sea level, ISA. ≈ = a value could not be confirmed in a "
+        "manufacturer document (sources in perf/aircraft.toml). ◀ = session default.", style="est")),
+        "✈ Aircraft types"), hints=["aircraft A320neo", "takeoff PHX"])
     return CommandResult(view, data=data, name="aircraft")
 
 

@@ -6,7 +6,7 @@ from rich.console import Group, RenderableType
 from rich.table import Table
 from rich.text import Text
 
-from skyscope.views.theme import hint_line
+from skyscope.views.theme import page, panel
 
 CATEGORY_ORDER = ("Explore", "Heat & takeoff", "Compare & rank", "Session")
 
@@ -14,8 +14,7 @@ CATEGORY_ORDER = ("Explore", "Heat & takeoff", "Compare & rank", "Session")
 def help_overview(commands: list) -> RenderableType:
     """All commands grouped by category, one line each."""
     parts: list[RenderableType] = [
-        Text.assemble(("SkyScope commands", "title"),
-                      ("  ·  type text to search · Tab completes · ↑ history", "muted")),
+        Text("Type text to search · Tab completes · ↑ history", style="muted"),
     ]
     by_cat: dict[str, list] = {}
     for cmd in commands:
@@ -34,15 +33,13 @@ def help_overview(commands: list) -> RenderableType:
             alias = f"({', '.join(cmd.aliases)})" if cmd.aliases else ""
             table.add_row(cmd.name, cmd.summary, alias)
         parts.append(table)
-    parts.append(Text(""))
-    parts.append(hint_line(["help takeoff", "open PHX", "aircraft"]))
-    return Group(*parts)
+    return page(panel(Group(*parts), "SkyScope commands"), hints=["help takeoff", "open PHX", "aircraft"])
 
 
 def command_help(cmd) -> RenderableType:
     """Usage, description and examples for one command."""
     parts: list[RenderableType] = [
-        Text.assemble((cmd.name, "code"), ("  —  ", "muted"), (cmd.summary, "")),
+        Text(cmd.summary),
         Text.assemble(("usage: ", "muted"), (cmd.usage, "bold")),
     ]
     if cmd.aliases:
@@ -55,4 +52,4 @@ def command_help(cmd) -> RenderableType:
         parts.append(Text("examples", style="muted"))
         for ex in cmd.examples:
             parts.append(Text.assemble(("  ", ""), (ex, "cyan")))
-    return Group(*parts)
+    return page(panel(Group(*parts), f"help · {cmd.name}"), hints=["help"])

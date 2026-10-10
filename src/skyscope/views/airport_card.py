@@ -11,7 +11,7 @@ from rich.text import Text
 
 from skyscope.data.weather import Metar, WxLookup, describe
 from skyscope.views import format as fmt
-from skyscope.views.theme import FLIGHT_CAT_STYLE, hint_line, temp_style
+from skyscope.views.theme import FLIGHT_CAT_STYLE, page, panel, temp_style
 
 TYPE_NAMES = {"large_airport": "Large airport", "medium_airport": "Medium airport",
               "small_airport": "Small airport", "heliport": "Heliport",
@@ -32,7 +32,8 @@ def header(rec: dict[str, Any], utc_offset_s: int | None) -> Group:
     else:  # solar time from longitude — approximate
         local = (now + timedelta(hours=rec["lon"] / 15)).strftime("%H:%M")
         tz = f"local ≈{local} (solar)"
-    line2 = Text(f"{fmt.flag(rec.get('iso_country'))} {place}".strip(), style="")
+    # (no flag emoji: regional-indicator pairs break panel borders in some terminals)
+    line2 = Text(place, style="")
     line2.append(f"  ·  {TYPE_NAMES.get(rec['type'], rec['type'])}"
                  f"{' · scheduled service' if rec.get('scheduled') else ''}", style="muted")
     line3 = Text(f"Elevation {fmt.elevation(rec.get('elevation_ft'))}  ·  {tz}", style="muted")
@@ -43,25 +44,24 @@ def header(rec: dict[str, Any], utc_offset_s: int | None) -> Group:
 
 
 def weather_block(wx: WxLookup, units: str, da_ft: float | None) -> Group:
-    """Right-now weather: category badge, plain English, raw METAR dimmed, DA."""
+    """Right-now weather: flight-category badge, plain English, raw METAR dimmed, DA."""
     m = wx.metar
     if m is None:
-        return Group(Text("Right now", style="accent"),
-                     Text(f"  {wx.note or 'No weather report available.'}", style="muted"))
-    line = Text("  ")
+        return Group(Text(wx.note or "No weather report available.", style="muted"))
+    line = Text()
     if m.flight_category:
-        line.append(f" {m.flight_category} ", style=f"reverse {FLIGHT_CAT_STYLE.get(m.flight_category, '')}")
-        line.append(" ")
-    line.append(fmt.temp(m.temp_c, units), style=temp_style(m.temp_c))
+        line.append(f" {m.flight_category} ", style=FLIGHT_CAT_STYLE.get(m.flight_category, "reverse"))
+        line.append("  ")
+    line.append(fmt.temp(m.temp_c, units), style=f"bold {temp_style(m.temp_c)}")
     line.append(f" · {describe(m)}")
-    sub = Text(f"  observed {fmt.stamp(m.observed)} · {m.station}", style="muted")
+    sub = Text(f"observed {fmt.stamp(m.observed)} · {m.station}", style="muted")
     if m.altimeter_inhg:
         sub.append(f" · altimeter {m.altimeter_inhg:.2f} inHg", style="muted")
     if da_ft is not None:
-        sub.append(f" · density altitude ≈{fmt.feet(da_ft)}", style="muted")
-    parts = [Text("Right now", style="accent"), line, sub, Text(f"  {m.raw}", style="dim")]
+        sub.append(f" · density altitude ≈{fmt.feet(da_ft)}", style="est")
+    parts = [line, sub, Text(m.raw, style="dim")]
     if wx.note:
-        parts.append(Text(f"  {wx.note}", style="warn"))
+        parts.append(Text(wx.note, style="warn"))
     return Group(*parts)
 
 
@@ -92,29 +92,24 @@ def runways_table(runways: list[dict[str, Any]], units: str, active: str | None,
 
 def card(rec: dict[str, Any], wx: WxLookup, runways: list[dict[str, Any]], active: str | None,
          takeoff_line: Text | None, climate_line: RenderableType | None, units: str,
-         utc_offset_s: int | None, da_ft: float | None) -> RenderableType:
-    """The full airport card."""
+         utc_offset_s: int | None, da_ft: float | None, aircraft_label: str = "") -> RenderableType:
+    """The full airport card: airport + weather, takeoff today, runways, climate."""
     m: Metar | None = wx.metar
-    parts: list[RenderableType] = [header(rec, utc_offset_s), Text(""), weather_block(wx, units, da_ft), Text("")]
-    parts.append(Text("Takeoff today", style="accent"))
-    parts.append(takeoff_line or Text("  Performance not modelled here.", style="muted"))
-    parts.append(Text(""))
-    parts.append(Text(f"Runways ({len(runways)})", style="accent"))
-    if runways:
-        parts.append(runways_table(runways, units, active,
-                                   (m.wind_dir, m.wind_kt) if m else (None, None)))
-    else:
-        parts.append(Text("  No runway data.", style="muted"))
-    if climate_line is not None:
-        parts += [Text(""), Text("Climate", style="accent"), climate_line]
     code = rec.get("code") or rec["ident"]
-    parts += [Text(""), hint_line([f"takeoff {code}", f"heat {code}", f"wx {code}"])]
-    return Group(*parts)
+    top = panel(Group(header(rec, utc_offset_s), Text(""), Text("Right now", style="accent"),
+                      weather_block(wx, units, da_ft)), f"✈ {code} · Airport card")
+    takeoff = panel(takeoff_line or Text("Performance not modelled here.", style="muted"),
+                    f"Takeoff today{' · ' + aircraft_label if aircraft_label else ''}", "≈ estimate")
+    rw_body: RenderableType = (runways_table(runways, units, active, (m.wind_dir, m.wind_kt) if m else (None, None))
+                               if runways else Text("No runway data.", style="muted"))
+    rw = panel(rw_body, f"Runways ({len(runways)})", "wind: + head / − tail, cross (kt)")
+    climate = panel(climate_line, "☀ Climate", "ERA5") if climate_line is not None else None
+    return page(top, takeoff, rw, climate, hints=[f"takeoff {code}", f"heat {code}", f"wx {code}"])
 
 
 def weather_view(code: str, wx: WxLookup, taf: str | None, units: str, da_ft: float | None) -> RenderableType:
     """Decoded METAR + raw TAF."""
-    parts: list[RenderableType] = [weather_block(wx, units, da_ft)]
+    body: list[RenderableType] = [weather_block(wx, units, da_ft)]
     m = wx.metar
     if m is not None:
         t = Table(box=None, show_header=False, padding=(0, 1), pad_edge=False)
@@ -127,14 +122,21 @@ def weather_view(code: str, wx: WxLookup, taf: str | None, units: str, da_ft: fl
         t.add_row("Visibility", f"{m.visibility or fmt.DASH} statute mi")
         t.add_row("Clouds", ", ".join(f"{c} {b:,} ft" if b else c for c, b in m.clouds) or "none reported")
         t.add_row("Altimeter", f"{m.altimeter_inhg:.2f} inHg" if m.altimeter_inhg else fmt.DASH)
-        parts += [Text(""), t]
-    parts += [Text(""), Text("Forecast (TAF)", style="accent")]
+        body += [Text(""), t]
     if taf:
         import re
 
-        for chunk in re.split(r"\s(?=FM\d|TEMPO|BECMG|PROB\d)", taf):
-            parts.append(Text(f"  {chunk}", style="dim"))
+        forecast: RenderableType = Group(*[Text(chunk, style="dim")
+                                           for chunk in re.split(r"\s(?=FM\d|TEMPO|BECMG|PROB\d)", taf)])
     else:
-        parts.append(Text("  No TAF available.", style="muted"))
-    parts.append(hint_line([f"takeoff {code}", f"runways {code}", f"open {code}"]))
-    return Group(*parts)
+        forecast = Text("No TAF available.", style="muted")
+    return page(panel(Group(*body), f"Weather · {code}", "NOAA AWC METAR"),
+                panel(forecast, "Forecast (TAF)"),
+                hints=[f"takeoff {code}", f"runways {code}", f"open {code}"])
+
+
+def runways_view(code: str, wind_text: str, runways: list[dict[str, Any]], units: str,
+                 wind: tuple[float | None, float | None], hints: list[str]) -> RenderableType:
+    """Runway list with wind components, in a panel."""
+    body = Group(Text(f"Wind {wind_text}", style="bold"), runways_table(runways, units, None, wind))
+    return page(panel(body, f"Runways · {code}", "+ head / − tail, then cross (kt)"), hints=hints)

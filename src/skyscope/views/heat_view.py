@@ -11,7 +11,7 @@ from rich.text import Text
 from skyscope.climate.metrics import HeatSummary
 from skyscope.views import format as fmt
 from skyscope.views.takeoff_view import bar
-from skyscope.views.theme import Responsive, anomaly_rgb, hint_line
+from skyscope.views.theme import Responsive, anomaly_rgb, page, panel
 
 CAVEAT = ("History: ERA5 reanalysis (Copernicus/ECMWF) via Open-Meteo — a ~9–25 km grid adjusted to "
           "field elevation, not the runway thermometer. Projections: CMIP6 HighResMIP, close to a "
@@ -34,27 +34,26 @@ def stripes(s: HeatSummary, width: int) -> Group:
         line.append("▒" if projected else "█", style=f"{anomaly_rgb(anom)}" + (" dim" if projected else ""))
     first = years[0] if years else ""
     last_obs = years[-1] if years else ""
-    label = Text(f"  {first}", style="muted")
-    label.append(f" … {last_obs} observed", style="muted")
+    label = Text(f"  {first}–{last_obs} observed", style="muted")
     if proj:
         label.append(f" · ▒ {proj[0]}–{proj[-1]} projected", style="muted")
-    label.append(" · colour = warm-season high vs 1951–1980", style="muted")
+    label.append(" · colour vs 1951–1980", style="muted")
     return Group(line, label)
 
 
-def _decade_table(title: str, rows: list[tuple[str, float]], fmt_value) -> Table:
-    table = Table(box=None, padding=(0, 1), header_style="bold", pad_edge=False, title=title,
-                  title_justify="left", title_style="muted", show_header=False)
+def _decade_table(title: str, rows: list[tuple[str, float]], fmt_value) -> Group:
+    table = Table(box=None, padding=(0, 1), header_style="bold", pad_edge=False, show_header=False)
     table.add_column(no_wrap=True)
     table.add_column(justify="right", no_wrap=True)
     table.add_column(no_wrap=True)
     top = max([abs(v) for _, v in rows] + [1e-9])
     for label, value in rows:
         table.add_row(label, fmt_value(value), Text(bar(abs(value), top, 28) or "·", style="red" if value > 0 else "cyan"))
-    return table
+    return Group(Text(title, style="bold"), table)
 
 
-def heat_view(code: str, name: str, s: HeatSummary, units: str, proj_note: str | None) -> RenderableType:
+def heat_view(code: str, name: str, s: HeatSummary, units: str, proj_note: str | None,
+              plot_note: Text | None = None) -> RenderableType:
     """The full heat page."""
     months = "–".join(calendar.month_abbr[m] for m in (s.months[0], s.months[2]))
     head = Text()
@@ -67,7 +66,7 @@ def heat_view(code: str, name: str, s: HeatSummary, units: str, proj_note: str |
     if s.projected_warming:
         vals = sorted(s.projected_warming.values())
         med = vals[len(vals) // 2]
-        head.append(f"; models add another {fmt.dtemp(med, units)} by 2031–2050 "
+        head.append(f"; models add another ≈{fmt.dtemp(med, units)} by 2031–2050 "
                     f"(range {fmt.dtemp(vals[0], units)} to {fmt.dtemp(vals[-1], units)}).")
     else:
         head.append(".")
@@ -85,21 +84,22 @@ def heat_view(code: str, name: str, s: HeatSummary, units: str, proj_note: str |
             warm_rows.append(("2040s (proj.)", sum(vals) / len(vals) - s.baseline))
     warm_table = _decade_table(f"Warm-season high vs 1951–1980 (baseline {fmt.temp(s.baseline, units, 1)})",
                                warm_rows, lambda v: fmt.dtemp(v, units))
-    hot_table = _decade_table(f"Unusually hot days per year (≥ {fmt.temp(s.p95, units, 1)}, this airport's "
-                              "1951–1980 95th percentile)", s.hot_p95_decades, lambda v: f"{v:.0f}")
-    parts: list[RenderableType] = [
-        Text(f"Heat history · {name}", style="accent"), head, Text(""),
-        Responsive(lambda w: stripes(s, w)), Text(""), trend_line, warm_table, Text(""), hot_table,
-    ]
+    hot_table = _decade_table(f"Unusually hot days/yr (≥ {fmt.temp(s.p95, units, 1)}, this airport's "
+                              "1951–80 95th pct.)", s.hot_p95_decades, lambda v: f"{v:.0f}")
+    story = panel(Group(head, Text(""), Responsive(lambda w: stripes(s, w)), Text(""), trend_line),
+                  f"☀ Heat history · {code} · {name}", "ERA5 1940→now · CMIP6 to 2050")
+    decades: list[RenderableType] = [warm_table, Text(""), hot_table]
     if any(v > 0 for _, v in s.hot_35_decades):
-        parts += [Text(""), _decade_table(f"Days per year ≥ {fmt.temp(35, units)}", s.hot_35_decades,
-                                          lambda v: f"{v:.0f}")]
-    parts += [Text(""), Text(f"Record hottest day: {fmt.temp(s.record_c, units, 1)} on {s.record_date} (ERA5 grid).")]
+        decades += [Text(""), _decade_table(f"Days per year ≥ {fmt.temp(35, units)}", s.hot_35_decades,
+                                            lambda v: f"{v:.0f}")]
+    decades += [Text(""), Text(f"Record hottest day: {fmt.temp(s.record_c, units, 1)} on {s.record_date} (ERA5 grid).")]
     if proj_note:
-        parts.append(Text(proj_note, style="warn"))
-    parts += [Text(CAVEAT, style="muted"), hint_line([f"takeoff {code} --decades", f"takeoff {code} --sweep",
-                                                       f"open {code}"])]
-    return Group(*parts)
+        decades.append(Text(proj_note, style="warn"))
+    if plot_note is not None:
+        decades.append(plot_note)
+    decades += [Text(""), Text(CAVEAT, style="est")]
+    return page(story, panel(Group(*decades), "By decade", "≈ estimates"),
+                hints=[f"takeoff {code} --decades", f"heat {code} --plot", f"open {code}"])
 
 
 def climate_line(s: HeatSummary, units: str) -> RenderableType:

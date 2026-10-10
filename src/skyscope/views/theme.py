@@ -6,32 +6,49 @@ use styles freely and still degrade to clean plain text.
 
 from __future__ import annotations
 
-from rich.console import Console
+from rich import box
+from rich.console import Console, Group, RenderableType
+from rich.panel import Panel
 from rich.text import Text
 from rich.theme import Theme
 
+# One palette everywhere: OK = green, RESTRICTED = orange, SEVERE / ABOVE LIMIT = red.
+OK_COLOR, RESTRICTED_COLOR, SEVERE_COLOR = "green", "dark_orange", "red"
+SKY, SUN = "#38bdf8", "#fb923c"  # wordmark gradient + panel borders
+
 STATUS_STYLE = {
-    "OK": "bold green",
-    "RESTRICTED": "bold yellow",
-    "SEVERE": "bold red",
-    "ABOVE LIMIT": "bold magenta",
+    "OK": f"bold {OK_COLOR}",
+    "RESTRICTED": f"bold {RESTRICTED_COLOR}",
+    "SEVERE": f"bold {SEVERE_COLOR}",
+    "ABOVE LIMIT": f"bold {SEVERE_COLOR}",
     "NO DATA": "dim",
 }
+# Explicit hex foregrounds: "bold black" renders as grey in many terminals.
+BADGE_STYLE = {
+    "OK": f"bold #000000 on {OK_COLOR}",
+    "RESTRICTED": f"bold #000000 on {RESTRICTED_COLOR}",
+    "SEVERE": f"bold #ffffff on {SEVERE_COLOR}",
+    "ABOVE LIMIT": f"bold #ffffff on {SEVERE_COLOR}",
+    "NO DATA": "reverse",
+}
+BORDER_STYLE = {"OK": OK_COLOR, "RESTRICTED": RESTRICTED_COLOR, "SEVERE": SEVERE_COLOR,
+                "ABOVE LIMIT": SEVERE_COLOR}
 STATUS_ICON = {"OK": "✓", "RESTRICTED": "▲", "SEVERE": "✖", "ABOVE LIMIT": "!", "NO DATA": "·"}
-FLIGHT_CAT_STYLE = {"VFR": "bold green", "MVFR": "bold blue", "IFR": "bold red",
-                    "LIFR": "bold magenta"}
+FLIGHT_CAT_STYLE = {"VFR": "bold #000000 on green", "MVFR": "bold #ffffff on blue",
+                    "IFR": "bold #ffffff on red", "LIFR": "bold #ffffff on magenta"}
 
 THEME = Theme({
     "title": "bold",
-    "accent": "bold cyan",
-    "code": "bold cyan",
+    "accent": f"bold {SKY}",
+    "code": f"bold {SKY}",
     "hint": "dim",
     "muted": "dim",
-    "est": "italic",
-    "good": "green",
-    "warn": "yellow",
-    "bad": "red",
-    "best": "bold green",
+    "est": "dim italic",
+    "good": OK_COLOR,
+    "warn": RESTRICTED_COLOR,
+    "bad": SEVERE_COLOR,
+    "best": f"bold {OK_COLOR}",
+    "border": SKY,
 })
 
 
@@ -85,3 +102,40 @@ class Responsive:
 
     def __rich_console__(self, console, options):
         yield self.build(options.max_width)
+
+
+def badge(status: str) -> Text:
+    """Status as a coloured badge: " RESTRICTED " on orange."""
+    text = Text()  # unstyled base, so table padding around the badge stays uncoloured
+    text.append(f" {status} ", style=BADGE_STYLE.get(status, "reverse"))
+    return text
+
+
+def est(text: str) -> Text:
+    """An estimate note in the shared dim-italic style."""
+    return Text(text, style="est")
+
+
+def panel(body: RenderableType, title: str | Text, subtitle: str | Text | None = None,
+          border: str = "border") -> Panel:
+    """The one panel style: rounded border, bold left-aligned title, dim-italic subtitle."""
+    title_text = title if isinstance(title, Text) else Text(f" {title} ", style="bold")
+    sub = None
+    if subtitle:
+        sub = subtitle if isinstance(subtitle, Text) else Text(f" {subtitle} ", style="est")
+    return Panel(body, title=title_text, title_align="left", subtitle=sub, subtitle_align="right",
+                 box=box.ROUNDED, border_style=border, padding=(0, 1))
+
+
+def page(*blocks: RenderableType | None, hints: list[str] | None = None) -> Group:
+    """Panels separated by one blank line, with the hint line at the bottom."""
+    parts: list[RenderableType] = []
+    for block in blocks:
+        if block is None:
+            continue
+        if parts:
+            parts.append(Text(""))
+        parts.append(block)
+    if hints:
+        parts.append(hint_line(hints))
+    return Group(*parts)

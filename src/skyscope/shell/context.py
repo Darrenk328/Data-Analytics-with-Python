@@ -70,6 +70,13 @@ class Context:
         else:
             yield
 
+    def prompt_parts(self) -> tuple[str | None, str]:
+        """(current airport code or None, aircraft id) for the coloured prompt."""
+        code = None
+        if self.airport_idx is not None:
+            code = str(self.store.airports["code"].iat[self.airport_idx])
+        return code, self.settings.aircraft
+
     def prompt_label(self) -> str:
         """Context shown in the shell prompt: "KPHX · 737-800"."""
         parts = []

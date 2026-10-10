@@ -9,7 +9,7 @@ from rich.table import Table
 from rich.text import Text
 
 from skyscope.views import format as fmt
-from skyscope.views.theme import Responsive, hint_line
+from skyscope.views.theme import Responsive, page, panel
 
 
 @dataclass
@@ -37,15 +37,12 @@ def compare_view(codes: list[str], names: list[str], rows: list[Row], verdict: s
                  aircraft_name: str, notes: list[str]) -> RenderableType:
     """Per-airport columns; best per row highlighted green."""
     table = Responsive(lambda width: _table(codes, names, rows, width))
-    parts: list[RenderableType] = [
-        Text(f"Compare · {' vs '.join(codes)} · {aircraft_name}", style="accent"),
-        table,
-        Text("green = best in row · modelled values are estimates (≈)", style="muted"),
-    ]
+    parts: list[RenderableType] = [table, Text("")]
     parts += [Text(n, style="muted") for n in notes]
-    parts += [Text(verdict, style="bold"), hint_line([f"takeoff {codes[0]} --decades",
-                                                      f"heat {codes[-1]}", f"open {codes[0]}"])]
-    return Group(*parts)
+    parts.append(Text(verdict, style="bold"))
+    return page(panel(Group(*parts), f"⇄ Compare · {' vs '.join(codes)} · {aircraft_name}",
+                      "green = best in row · ≈ estimates"),
+                hints=[f"takeoff {codes[0]} --decades", f"heat {codes[-1]}", f"open {codes[0]}"])
 
 
 def cell(value: float | None, render) -> str:
