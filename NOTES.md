@@ -45,4 +45,5 @@ Each entry: what the plan assumed → what reality is → what SkyScope does.
 - On this macOS + Python 3.14 setup, the editable-install `.pth` file came out with the
   macOS `hidden` flag, and Python 3.14 skips hidden `.pth` files, so `import skyscope` failed
   after `pip install -e .`. Fix: `chflags nohidden .venv/lib/python3.*/site-packages/*.pth`.
-  pytest also sets `pythonpath = ["src"]` so tests never depend on the editable install.
+  The flag is re-applied by the OS (the Desktop folder is synced), so for development here
+  commands are run with `PYTHONPATH=src`; pytest sets `pythonpath = ["src"]` itself.
