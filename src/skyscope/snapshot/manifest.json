@@ -1,0 +1,9 @@
+{
+  "fetched": {
+    "airports.csv.gz": "2026-10-10T17:54:21Z",
+    "runways.csv.gz": "2026-10-10T17:54:23Z",
+    "countries.csv.gz": "2026-10-10T17:54:23Z",
+    "regions.csv.gz": "2026-10-10T17:54:23Z",
+    "metars.cache.csv.gz": "2026-10-10T17:54:23Z"
+  }
+}

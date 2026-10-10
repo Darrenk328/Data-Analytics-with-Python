@@ -1,0 +1,29 @@
+id,ident,type,name,latitude_deg,longitude_deg,elevation_ft,continent,iso_country,iso_region,municipality,scheduled_service,icao_code,iata_code,gps_code,local_code,home_link,wikipedia_link,keywords
+6523,00A,heliport,Total RF Heliport,40.070985,-74.933689,11,NA,US,US-PA,Bensalem,no,,,K00A,00A,https://www.penndot.pa.gov/TravelInPA/airports-pa/Pages/Total-RF-Heliport.aspx,,
+323361,00AA,small_airport,Aero B Ranch Airport,38.704022,-101.473911,3435,NA,US,US-KS,Leoti,no,,,00AA,00AA,,,
+6541,00IS,closed,Hayenga's Cant Find Farms Airport,40.0256,-89.122902,820,NA,US,US-IL,Kings,no,,,,,,,00IS
+6605,01MD,seaplane_base,Annapolis Seaplane Base,38.999199,-76.456001,,NA,US,US-MD,Annapolis,no,,,01MD,01MD,,,
+6624,01TA,closed,Thirty Thirty Matlock Office Center Helistop,32.694867,-97.115964,630,NA,US,US-TX,Arlington,no,,,,,,,01TA
+6880,06LA,heliport,Panther Helicopters Inc Heliport,29.84606,-90.03216,,NA,US,US-LA,Belle Chasse,no,,,06LA,06LA,,,
+7092,0AZ0,heliport,Arizona Heart Hospital Heliport,33.481187,-112.03976,1161,NA,US,US-AZ,Phoenix,no,,,0AZ0,0AZ0,,,
+7097,0AZ6,heliport,St Joseph's Hospital Heliport,33.482963,-112.079301,1213,NA,US,US-AZ,Phoenix,no,,,0AZ6,0AZ6,,,
+8209,1AZ4,closed,Schuff Aviation Heliport,33.44258,-112.099222,1101,NA,US,US-AZ,Phoenix,no,,,,,,,1AZ4
+8783,20E,heliport,Valleywise Health Medical Center Heliport,33.456859,-112.026684,1117,NA,US,US-AZ,Phoenix,no,,,,20E,,,Maricopa Medical Center Heliport
+10394,3AZ4,heliport,John C Lincoln Deer Valley Hospital Heliport,33.665905,-112.115325,1380,NA,US,US-AZ,Phoenix,no,,,3AZ4,3AZ4,,,Phoenix General Satellite Hospital Heliport
+2434,EGLL,large_airport,London Heathrow Airport,51.470748,-0.459909,83,EU,GB,GB-ENG,London,yes,EGLL,LHR,EGLL,,http://www.heathrow.com/,https://en.wikipedia.org/wiki/Heathrow_Airport,"LON, Londres"
+31055,FAOR,large_airport,O.R. Tambo International Airport,-26.140081,28.246801,5558,AF,ZA,ZA-GT,Johannesburg,yes,FAOR,JNB,FAOR,,https://ortambo-airport.com/,https://en.wikipedia.org/wiki/O._R._Tambo_International_Airport,"Johannesburg International Airport, FAJS"
+3039,FYWH,large_airport,Hosea Kutako International Airport,-22.4799,17.4709,5640,AF,NA,NA-KH,Windhoek,yes,FYWH,WDH,FYWH,,http://airports.com.na/,https://en.wikipedia.org/wiki/Windhoek_Hosea_Kutako_International_Airport,J.G. Strijdom Airport
+3486,KDEN,large_airport,Denver International Airport,39.860027,-104.673792,5431,NA,US,US-CO,Denver,yes,KDEN,DEN,KDEN,DEN,http://www.flydenver.com/,https://en.wikipedia.org/wiki/Denver_International_Airport,"DVX, KVDX"
+19672,KDVT,small_airport,Phoenix Deer Valley Airport,33.6883010864,-112.083000183,1478,NA,US,US-AZ,Phoenix,no,KDVT,DVT,KDVT,DVT,http://deervalleyairport.com/,https://en.wikipedia.org/wiki/Phoenix_Deer_Valley_Airport,
+3521,KEWR,large_airport,Newark Liberty International Airport,40.6894,-74.170545,18,NA,US,US-NJ,Newark,yes,KEWR,EWR,KEWR,EWR,https://www.panynj.gov/CommutingTravel/airports/html/newarkliberty.html,https://en.wikipedia.org/wiki/Newark_Liberty_International_Airport,"Manhattan, New York City, NYC"
+3617,KIWA,medium_airport,Mesa Gateway Airport,33.3078,-111.654999,1382,NA,US,US-AZ,Mesa,yes,KIWA,AZA,KIWA,IWA,https://www.gatewayairport.com/,https://en.wikipedia.org/wiki/Phoenix%E2%80%93Mesa_Gateway_Airport,"Higley Field, CHD, Phoenix-Mesa Gateway Airport, Williams Air Force Base, Williams Gateway Airport"
+3622,KJFK,large_airport,John F. Kennedy International Airport,40.639447,-73.779317,13,NA,US,US-NY,New York,yes,KJFK,JFK,KJFK,JFK,https://www.jfkairport.com/,https://en.wikipedia.org/wiki/John_F._Kennedy_International_Airport,"Manhattan, New York City, NYC, Idlewild, IDL, KIDL"
+3643,KLGA,large_airport,LaGuardia Airport,40.777199,-73.872597,21,NA,US,US-NY,New York,yes,KLGA,LGA,KLGA,LGA,https://www.laguardiaairport.com/,https://en.wikipedia.org/wiki/LaGuardia_Airport,"Manhattan, New York City, NYC, Glenn H. Curtiss Airport, North Beach Airport, La Guardia"
+3772,KPHX,large_airport,Phoenix Sky Harbor International Airport,33.435302,-112.005905,1135,NA,US,US-AZ,Phoenix,yes,KPHX,PHX,KPHX,PHX,http://phoenix.gov/skyharborairport/,https://en.wikipedia.org/wiki/Phoenix_Sky_Harbor_International_Airport,
+21045,KSDL,small_airport,Scottsdale Airport,33.622898101807,-111.91100311279,1510,NA,US,US-AZ,Scottsdale,no,KSDL,SCF,KSDL,SDL,http://www.scottsdaleaz.gov/airport/,https://en.wikipedia.org/wiki/Scottsdale_Airport,Thunderbird Field #2
+5220,OKKK,large_airport,Kuwait International Airport,29.224487,47.969813,206,AS,KW,KW-FA,Kuwait City,yes,OKKK,KWI,OKKK,,https://www.kuwaitairport.gov.kw/,https://en.wikipedia.org/wiki/Kuwait_International_Airport,"OKBK, Al Mubarak Air Base, مطار الكويت الدولي"
+5235,OMDB,large_airport,Dubai International Airport,25.24979,55.370992,62,AS,AE,AE-DU,Dubai,yes,OMDB,DXB,OMDB,,https://www.dubaiairport.com/,https://en.wikipedia.org/wiki/Dubai_International_Airport,مطار دبي الدولي‎
+308273,SEQM,large_airport,Mariscal Sucre International Airport,-0.125399,-78.354306,7841,SA,EC,EC-P,Quito,yes,SEQM,UIO,SEQM,UIO,https://www.aeropuertoquito.aero/?lang=en,https://en.wikipedia.org/wiki/Mariscal_Sucre_International_Airport,Nuevo Aeropuerto Internacional Mariscal Sucre
+6180,SLCB,large_airport,Jorge Wilsterman International Airport,-17.421105,-66.177102,8360,SA,BO,BO-C,Cochabamba,yes,SLCB,CBB,SLCB,,,https://en.wikipedia.org/wiki/Jorge_Wilstermann_International_Airport,
+6184,SLLP,large_airport,El Alto International Airport,-16.510272,-68.189416,13355,SA,BO,BO-L,La Paz / El Alto,yes,SLLP,LPB,SLLP,,https://naabol.gob.bo/aeropuerto-internacional-el-alto/,https://en.wikipedia.org/wiki/El_Alto_International_Airport,
+26887,WSSS,large_airport,Singapore Changi Airport,1.35019,103.994003,22,AS,SG,SG-04,Singapore,yes,WSSS,SIN,WSSS,,http://www.changiairport.com/,https://en.wikipedia.org/wiki/Singapore_Changi_Airport,RAF Changi
