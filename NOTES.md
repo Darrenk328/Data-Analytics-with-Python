@@ -39,3 +39,10 @@ Each entry: what the plan assumed → what reality is → what SkyScope does.
   also keeps the snapshot small and the API cheaper.
 - The delta is applied per calendar month and per quantile (quantile delta mapping), so a
   model that warms hot days more than average days is represented.
+
+## Dev environment
+
+- On this macOS + Python 3.14 setup, the editable-install `.pth` file came out with the
+  macOS `hidden` flag, and Python 3.14 skips hidden `.pth` files, so `import skyscope` failed
+  after `pip install -e .`. Fix: `chflags nohidden .venv/lib/python3.*/site-packages/*.pth`.
+  pytest also sets `pythonpath = ["src"]` so tests never depend on the editable install.
