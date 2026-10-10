@@ -77,5 +77,5 @@ Each entry: what the plan assumed → what reality is → what SkyScope does.
   files are kept.
 - plotext isn't used. Charts are pure-Rich bar tables, which behave the same at 80 columns
   and with NO_COLOR.
-- Phases 6–7 (hotspots, rank, vs, map, explain, export, favourites, near, tour) were not
+- Phases 6–7 except `vs` (hotspots, rank, map, explain, export, favourites, near, tour) were not
   built in this session.

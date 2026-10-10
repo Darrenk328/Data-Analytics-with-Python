@@ -88,3 +88,34 @@ def test_takeoff_heliport_explains(store) -> None:
     ctx = make_ctx(store)
     run_line(ctx, "takeoff 00A --temp 30")
     assert "heliport" in output(ctx)
+
+
+def test_vs_offline_showcase(store) -> None:
+    from skyscope.config import RUNTIME
+
+    RUNTIME.offline = True
+    ctx = make_ctx(store, width=80)
+    res = run_line(ctx, "vs PHX DOH DFW")
+    assert res is not None
+    assert [a["code"] for a in res.data["airports"]] == ["PHX", "DOH", "DFW"]
+    assert all(a["warming_c"] is not None for a in res.data["airports"])
+    out = output(ctx)
+    assert "Verdict:" in out and "None" not in out and "nan" not in out.split()
+
+
+def test_vs_missing_data_shows_dash(store) -> None:
+    from skyscope.config import RUNTIME
+
+    RUNTIME.offline = True
+    ctx = make_ctx(store)
+    res = run_line(ctx, "vs PHX 00A")  # heliport: no takeoff/climate rows
+    assert res is not None and "—" in output(ctx)
+
+
+def test_vs_best_index() -> None:
+    from skyscope.views.compare_view import Row, best_index
+
+    assert best_index(Row("x", [3.0, 1.0, None], ["", "", ""], "low")) == 1
+    assert best_index(Row("x", [3.0, 1.0], ["", ""], "high")) == 0
+    assert best_index(Row("x", [1.0, 1.0], ["", ""], "low")) is None  # tie → no highlight
+    assert best_index(Row("x", [None, 2.0], ["", ""], "low")) is None

@@ -593,3 +593,115 @@ def cmd_update(ctx: Context, args: list[str]) -> CommandResult:
         raise UserError("METAR download failed", "airports were updated; try again later for weather")
     msg = f"Updated {ctx.store.size:,} airports and {len(bulk.frame):,} METARs ({sources.NETWORK_CALLS} downloads)."
     return CommandResult(Text(msg, style="green"), data={"airports": ctx.store.size, "metars": len(bulk.frame)})
+
+
+# --------------------------------------------------------------------------- compare
+
+
+def _compare_column(ctx: Context, idx: int, ac) -> dict[str, Any]:
+    """All compare values for one airport; anything unavailable is None (shown as —)."""
+    from skyscope.climate.metrics import heat_summary, restricted_days
+    from skyscope.climate.projections import delta_projection
+    from skyscope.perf.takeoff import threshold_temp
+    from skyscope.views import format as fmt
+
+    rec = airport_record(ctx, idx)
+    col: dict[str, Any] = {"code": rec["code"], "name": rec["name"], "elevation_ft": rec.get("elevation_ft"),
+                           "longest_paved_ft": rec.get("longest_paved_ft"), "temp_c": None,
+                           "density_alt_ft": None, "threshold_c": None, "threshold_kind": None,
+                           "warming_c": None, "restricted_recent": None, "restricted_2031_2050": None,
+                           "restricted_range": None, "notes": []}
+    try:
+        m = _wx(ctx, rec).metar
+        if m is not None:
+            col["temp_c"], col["density_alt_ft"] = m.temp_c, _da(rec, m)
+    except Exception as exc:  # weather is optional here
+        col["notes"].append(f"{rec['code']}: no weather ({type(exc).__name__})")
+    if not rec["perf_ok"]:
+        col["notes"].append(f"{rec['code']}: takeoff not modelled (no paved runway/elevation)")
+        return col
+    runway_m = rec["longest_paved_ft"] / fmt.FT_PER_M
+    th = threshold_temp(ac, rec["elevation_ft"], runway_m)
+    col["threshold_kind"] = th.kind
+    col["threshold_c"] = th.temp_c if th.kind == "normal" else (-99.0 if th.kind == "always" else 99.0)
+    try:
+        era, cm, note = _climate(ctx, rec)
+    except UserError as exc:
+        col["notes"].append(f"{rec['code']}: {exc}")
+        return col
+    if note:
+        col["notes"].append(f"{rec['code']}: {note}")
+    col["warming_c"] = heat_summary(era.dates, era.tmax).warming
+    projected = delta_projection(era.dates, era.tmax, cm) if cm is not None else None
+    st = restricted_days(ac, rec["elevation_ft"], runway_m, era.dates, era.tmax, projected)
+    col["restricted_recent"] = st.recent
+    col["restricted_2031_2050"] = st.projected_median
+    col["restricted_range"] = st.projected_range
+    return col
+
+
+@command("vs", "Compare 2–4 airports side by side", "vs <A> <B> [C] [D] [--aircraft ID]",
+         ["vs PHX DOH DFW", "vs PHX DFW --aircraft 787-9", "compare DXB KWI"],
+         aliases=("compare",), category="Compare & rank",
+         details="Rows: elevation, longest paved runway, live temperature and density altitude, "
+                 "threshold temperature for the session aircraft, warming since 1951–1980, and "
+                 "restricted days per year (1996–2025 vs 2031–2050). Best value per row is green.")
+def cmd_vs(ctx: Context, args: list[str]) -> CommandResult:
+    from skyscope.views import format as fmt
+    from skyscope.views.compare_view import Row, cell, compare_view
+
+    pos, opts = parse_args(args, {"aircraft": str})
+    if not 2 <= len(pos) <= 4:
+        raise UserError("vs needs 2 to 4 airports", "e.g. vs PHX DOH DFW")
+    ac = _aircraft(ctx, opts.get("aircraft"))
+    indices = [resolve_airport(ctx, p) for p in pos]
+    cols = [_compare_column(ctx, i, ac) for i in indices]
+    u = ctx.units
+
+    def row(label: str, key: str, render, better: str | None) -> Row:
+        vals = [c[key] for c in cols]
+        return Row(label, vals, [cell(v, render) for v in vals], better)
+
+    def threshold_cell(c: dict[str, Any]) -> str:
+        if c["threshold_kind"] == "always":
+            return "any temp"
+        if c["threshold_kind"] == "never":
+            return "> 60 °C" if u == "metric" else "> 140 °F"
+        return cell(c["threshold_c"], lambda v: "≈" + fmt.temp(v, u))
+
+    proj_shown = []
+    for c in cols:
+        med, rng = c["restricted_2031_2050"], c["restricted_range"]
+        proj_shown.append(fmt.DASH if med is None else f"≈{med:.0f} ({rng[0]:.0f}–{rng[1]:.0f})")
+    rows = [
+        row("Elevation", "elevation_ft", fmt.feet, "low"),
+        row("Longest runway", "longest_paved_ft", lambda v: fmt.length(v, u), "high"),
+        row("Temperature now", "temp_c", lambda v: fmt.temp(v, u), "low"),
+        row("Density alt. now", "density_alt_ft", lambda v: "≈" + fmt.feet(v), "low"),
+        Row("Restriction starts", [c["threshold_c"] for c in cols],
+            [threshold_cell(c) for c in cols], "high"),
+        row("Warming vs 1951–80", "warming_c", lambda v: fmt.dtemp(v, u), "low"),
+        row("Restr. days/yr 1996–2025", "restricted_recent", lambda v: f"≈{v:.0f}", "low"),
+        Row("Restr. days/yr 2031–50", [c["restricted_2031_2050"] for c in cols], proj_shown, "low"),
+    ]
+    # Verdict: most robust = highest threshold; most exposed = most projected (or recent) restricted days.
+    codes = [c["code"] for c in cols]
+    th = [(c["threshold_c"], c["code"]) for c in cols if c["threshold_c"] is not None]
+    verdict = "Not enough data for a verdict."
+    if th:
+        robust = max(th)[1]
+        verdict = f"Verdict: {robust} is the easiest place to depart a full {ac.name}"
+        proj = [(c["restricted_2031_2050"], c["code"]) for c in cols if c["restricted_2031_2050"] is not None]
+        recent = [(c["restricted_recent"], c["code"]) for c in cols if c["restricted_recent"] is not None]
+        if proj and max(proj)[0] >= 0.5:
+            d, code = max(proj)
+            verdict += f"; {code} is most exposed, with ≈{fmt.plural(d, 'restricted day')}/yr projected for 2031–2050"
+        elif recent and max(recent)[0] >= 0.5:
+            d, code = max(recent)
+            verdict += f"; {code} is most exposed, with ≈{fmt.plural(d, 'restricted day')}/yr in 1996–2025"
+        verdict += " (estimates)."
+    notes = [n for c in cols for n in c["notes"]]
+    data = {"aircraft": ac.id, "airports": [{k: v for k, v in c.items() if k != "notes"} for c in cols],
+            "verdict": verdict, "estimate": True}
+    view = compare_view(codes, [c["name"] for c in cols], rows, verdict, ac.name + (" ≈" if ac.approx else ""), notes)
+    return CommandResult(view, data=data, name="vs_" + "_".join(codes))
