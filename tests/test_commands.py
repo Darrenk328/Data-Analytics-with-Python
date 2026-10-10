@@ -59,3 +59,32 @@ def test_junk_input_never_crashes(store, line) -> None:
     out = output(ctx)
     assert "Traceback" not in out
     assert "something went wrong" not in out, out
+
+
+def test_takeoff_what_if_temps(store) -> None:
+    ctx = make_ctx(store)
+    hot = run_line(ctx, "takeoff PHX --temp 48")
+    assert hot.data["result"]["status"] == "RESTRICTED"
+    cool = run_line(ctx, "takeoff PHX --temp 15")
+    assert cool.data["result"]["status"] == "OK"
+    assert "estimate" in output(ctx)
+
+
+@pytest.mark.parametrize("width", [80, 120])
+@pytest.mark.parametrize("code", ["PHX", "00AA", "00A"])  # large, grass strip, heliport
+def test_card_renders(store, code, width) -> None:
+    from skyscope.config import RUNTIME
+
+    RUNTIME.offline = True
+    ctx = make_ctx(store, width=width)
+    assert run_line(ctx, f"open {code}") is not None
+    out = output(ctx)
+    assert "nan" not in out.split() and "None" not in out
+    if code == "00A":
+        assert "Not modelled here" in out
+
+
+def test_takeoff_heliport_explains(store) -> None:
+    ctx = make_ctx(store)
+    run_line(ctx, "takeoff 00A --temp 30")
+    assert "heliport" in output(ctx)
