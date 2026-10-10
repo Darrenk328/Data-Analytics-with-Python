@@ -13,8 +13,9 @@ from rich.text import Text
 from rich.theme import Theme
 
 # One palette everywhere: OK = green, RESTRICTED = orange, SEVERE / ABOVE LIMIT = red.
-OK_COLOR, RESTRICTED_COLOR, SEVERE_COLOR = "green", "dark_orange", "red"
-SKY, SUN = "#38bdf8", "#fb923c"  # wordmark gradient + panel borders
+OK_COLOR, RESTRICTED_COLOR, SEVERE_COLOR = "#22c55e", "red", "red"
+GREEN = "#22c55e"
+SKY = SUN = GREEN  # single accent colour
 
 STATUS_STYLE = {
     "OK": f"bold {OK_COLOR}",
@@ -26,13 +27,12 @@ STATUS_STYLE = {
 # Explicit hex foregrounds: "bold black" renders as grey in many terminals.
 BADGE_STYLE = {
     "OK": f"bold #000000 on {OK_COLOR}",
-    "RESTRICTED": f"bold #000000 on {RESTRICTED_COLOR}",
+    "RESTRICTED": f"bold #ffffff on {RESTRICTED_COLOR}",
     "SEVERE": f"bold #ffffff on {SEVERE_COLOR}",
     "ABOVE LIMIT": f"bold #ffffff on {SEVERE_COLOR}",
     "NO DATA": "reverse",
 }
-BORDER_STYLE = {"OK": OK_COLOR, "RESTRICTED": RESTRICTED_COLOR, "SEVERE": SEVERE_COLOR,
-                "ABOVE LIMIT": SEVERE_COLOR}
+BORDER_STYLE: dict[str, str] = {}  # plain grey borders everywhere
 STATUS_ICON = {"OK": "✓", "RESTRICTED": "▲", "SEVERE": "✖", "ABOVE LIMIT": "!", "NO DATA": "·"}
 FLIGHT_CAT_STYLE = {"VFR": "bold #000000 on green", "MVFR": "bold #ffffff on blue",
                     "IFR": "bold #ffffff on red", "LIFR": "bold #ffffff on magenta"}
@@ -43,12 +43,12 @@ THEME = Theme({
     "code": f"bold {SKY}",
     "hint": "dim",
     "muted": "dim",
-    "est": "dim italic",
+    "est": "dim",
     "good": OK_COLOR,
     "warn": RESTRICTED_COLOR,
     "bad": SEVERE_COLOR,
     "best": f"bold {OK_COLOR}",
-    "border": SKY,
+    "border": "grey50",
 })
 
 
@@ -64,7 +64,7 @@ def hint_line(commands: list[str]) -> Text:
     for i, cmd in enumerate(c for c in commands if c):
         if i:
             text.append("  ·  ", style="hint")
-        text.append(cmd, style="dim cyan")
+        text.append(cmd, style="white")
     return text
 
 
@@ -118,7 +118,7 @@ def est(text: str) -> Text:
 
 def panel(body: RenderableType, title: str | Text, subtitle: str | Text | None = None,
           border: str = "border") -> Panel:
-    """The one panel style: rounded border, bold left-aligned title, dim-italic subtitle."""
+    """The one panel style: plain grey border, bold left-aligned title, dim subtitle."""
     title_text = title if isinstance(title, Text) else Text(f" {title} ", style="bold")
     sub = None
     if subtitle:

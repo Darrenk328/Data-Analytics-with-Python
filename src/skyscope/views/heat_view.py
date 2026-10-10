@@ -13,7 +13,7 @@ from skyscope.views import format as fmt
 from skyscope.views.takeoff_view import bar
 from skyscope.views.theme import Responsive, anomaly_rgb, page, panel
 
-CAVEAT = ("History: ERA5 reanalysis (Copernicus/ECMWF) via Open-Meteo — a ~9–25 km grid adjusted to "
+CAVEAT = ("History: ERA5 reanalysis (Copernicus/ECMWF) via Open-Meteo - a ~9–25 km grid adjusted to "
           "field elevation, not the runway thermometer. Projections: CMIP6 HighResMIP, close to a "
           "high-emissions (RCP8.5-like) scenario, ending 2050; applied to the observed record with "
           "the delta method. All values are estimates.")
@@ -87,7 +87,7 @@ def heat_view(code: str, name: str, s: HeatSummary, units: str, proj_note: str |
     hot_table = _decade_table(f"Unusually hot days/yr (≥ {fmt.temp(s.p95, units, 1)}, this airport's "
                               "1951–80 95th pct.)", s.hot_p95_decades, lambda v: f"{v:.0f}")
     story = panel(Group(head, Text(""), Responsive(lambda w: stripes(s, w)), Text(""), trend_line),
-                  f"☀ Heat history · {code} · {name}", "ERA5 1940→now · CMIP6 to 2050")
+                  f"Heat history · {code} · {name}", "ERA5 1940→now · CMIP6 to 2050")
     decades: list[RenderableType] = [warm_table, Text(""), hot_table]
     if any(v > 0 for _, v in s.hot_35_decades):
         decades += [Text(""), _decade_table(f"Days per year ≥ {fmt.temp(35, units)}", s.hot_35_decades,

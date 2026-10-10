@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from datetime import datetime, timezone
 
-DASH = "—"
+DASH = "-"
 EST = "≈"
 FT_PER_M = 3.28084
 LB_PER_KG = 2.20462
@@ -16,7 +16,7 @@ def _missing(value: float | int | None) -> bool:
 
 
 def num(value: float | int | None, decimals: int = 0) -> str:
-    """1135.0 → "1,135"; None → "—"."""
+    """1135.0 → "1,135"; None → "-"."""
     if _missing(value):
         return DASH
     return f"{value:,.{decimals}f}"

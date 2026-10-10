@@ -76,8 +76,8 @@ def verdict_panel(code: str, ac: Aircraft, res: TakeoffResult, runway_name: str,
                         f"{fmt.dtemp(res.margin_c, units, 0).lstrip('+')} of margin")
         else:
             body.append(f"; {now} {fmt.dtemp(-res.margin_c, units, 0).lstrip('+')} past it")
-    title = f"✈ Takeoff · {code} · {ac.name}{' ≈' if ac.approx else ''}"
-    return panel(body, title, "≈ estimate — not a flight manual", border=BORDER_STYLE.get(res.status, "border"))
+    title = f"Takeoff · {code} · {ac.name}{' ≈' if ac.approx else ''}"
+    return panel(body, title, "≈ estimate - not a flight manual", border=BORDER_STYLE.get(res.status, "border"))
 
 
 def all_aircraft_table(rows: list[tuple[Aircraft, TakeoffResult]], units: str) -> Panel:
@@ -125,7 +125,7 @@ def sweep_view(ac: Aircraft, rows: list[tuple[float, float, float]], today_c: fl
         if record_c is not None and abs(t - record_c) < 1:
             marks.append("◀ record high")
         style = OK_COLOR if pax <= 0 else SEVERE_COLOR if pax > worst * 0.66 else RESTRICTED_COLOR
-        table.add_row(fmt.temp(t, units), "—" if pax <= 0 else f"≈{pax:,.0f}",
+        table.add_row(fmt.temp(t, units), "-" if pax <= 0 else f"≈{pax:,.0f}",
                       Text(bar(pax, worst, 28) or "·", style=style), " ".join(marks))
     return panel(table, f"Passengers lost vs temperature · {ac.name}", "≈ estimate")
 

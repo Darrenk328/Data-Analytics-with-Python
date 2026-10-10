@@ -154,7 +154,7 @@ def cmd_filter(ctx: Context, args: list[str]) -> CommandResult:
         raise UserError("filter needs an expression", "e.g. filter country=US elevation>5000")
     if expr.lower() in {"clear", "reset", "none"}:
         ctx.push_results(None)  # type: ignore[arg-type]
-        return CommandResult(Text("Filters cleared — the next filter searches all airports.", style="muted"))
+        return CommandResult(Text("Filters cleared - the next filter searches all airports.", style="muted"))
     try:
         terms = flt.parse(expr, ctx.store)
     except flt.FilterError as exc:
@@ -173,7 +173,7 @@ def cmd_filter(ctx: Context, args: list[str]) -> CommandResult:
 def cmd_back(ctx: Context, args: list[str]) -> CommandResult:
     rs = ctx.pop_results()
     if rs is None:
-        return CommandResult(Text("Nothing to go back to — the next filter searches all airports.", style="muted"))
+        return CommandResult(Text("Nothing to go back to - the next filter searches all airports.", style="muted"))
     return show_results(ctx, rs)
 
 
@@ -222,7 +222,7 @@ def cmd_banner(ctx: Context, args: list[str]) -> CommandResult:
 
 
 def _launch_story(ctx: Context, code: str = "PHX") -> dict[str, Any] | None:
-    """Live headline for the launch screen (None on any problem — the panel is then skipped)."""
+    """Live headline for the launch screen (None on any problem - the panel is then skipped)."""
     try:
         from skyscope.data.weather import get_metar
         from skyscope.perf.takeoff import evaluate
@@ -275,7 +275,7 @@ def pick_runway(ctx: Context, rec: dict[str, Any], want: str | None) -> tuple[st
 
 def _perf_check(rec: dict[str, Any]) -> None:
     if rec["type"] in ("heliport", "balloonport", "seaplane_base", "closed"):
-        raise UserError(f"{rec['code']} is a {rec['type'].replace('_', ' ')} — no takeoff runway to model")
+        raise UserError(f"{rec['code']} is a {rec['type'].replace('_', ' ')} - no takeoff runway to model")
     if rec.get("elevation_ft") is None:
         raise UserError(f"{rec['code']} has no elevation on record, so takeoff performance isn't modelled")
 
@@ -345,7 +345,7 @@ def cmd_open(ctx: Context, args: list[str]) -> CommandResult:
             else f"it's a {rec['type'].replace('_', ' ')}"
         line = Text(f"Not modelled here ({why}).", style="muted")
     else:
-        line = Text("No live temperature — try: takeoff " + rec["code"] + " --temp 35", style="muted")
+        line = Text("No live temperature - try: takeoff " + rec["code"] + " --temp 35", style="muted")
     climate_line, offset = _climate_card_line(ctx, rec)
     view = card(rec, wx, runways, active.ident if active else None, line, climate_line, ctx.units,
                 offset, _da(rec, m), f"full {ac.name}{' ≈' if ac.approx else ''}")
@@ -353,19 +353,19 @@ def cmd_open(ctx: Context, args: list[str]) -> CommandResult:
 
 
 def _climate_card_line(ctx: Context, rec: dict[str, Any]):
-    """(renderable, utc offset) from cached climate only — never fetches on the card."""
+    """(renderable, utc offset) from cached climate only - never fetches on the card."""
     from skyscope.climate.history import load_era5
     from skyscope.climate.metrics import heat_summary
     from skyscope.views.heat_view import climate_line
 
     era = load_era5(rec, allow_fetch=False)
     if era is None:
-        return Text(f"  Not downloaded yet — heat {rec['code']} fetches 85 years of history.", style="muted"), None
+        return Text(f"  Not downloaded yet - heat {rec['code']} fetches 85 years of history.", style="muted"), None
     return climate_line(heat_summary(era.dates, era.tmax), ctx.units), era.utc_offset_s
 
 
 def _climate(ctx: Context, rec: dict[str, Any], projections: bool = True):
-    """(Era5, Cmip6 | None, note) — fetching on demand with a spinner, cached afterwards."""
+    """(Era5, Cmip6 | None, note) - fetching on demand with a spinner, cached afterwards."""
     from skyscope.climate.history import load_era5
     from skyscope.climate.projections import load_cmip6
     from skyscope.data.sources import FetchError, OfflineError
@@ -387,9 +387,9 @@ def _climate(ctx: Context, rec: dict[str, Any], projections: bool = True):
             with ctx.spinner(f"Downloading CMIP6 projections for {rec['code']} (once)…"):
                 cm = load_cmip6(rec)
             if cm is None:
-                note = "Projections not cached (offline) — showing history only."
+                note = "Projections not cached (offline) - showing history only."
         except (FetchError, OfflineError, KeyError, ValueError) as exc:
-            note = f"Projections unavailable ({exc}) — showing history only."
+            note = f"Projections unavailable ({exc}) - showing history only."
     return era, cm, note
 
 
@@ -441,7 +441,7 @@ def cmd_runways(ctx: Context, args: list[str]) -> CommandResult:
          aliases=("to",), category="Heat & takeoff",
          details="Uses the live METAR temperature and altimeter (or --temp), the longest open "
                  "paved runway (or --runway) and the session aircraft (or --aircraft). Results "
-                 "are educational estimates — see the README and NOTES.md.")
+                 "are educational estimates - see the README and NOTES.md.")
 def cmd_takeoff(ctx: Context, args: list[str]) -> CommandResult:
     import numpy as np
 
@@ -551,7 +551,7 @@ def _decades(ctx: Context, rec: dict[str, Any], ac, runway_m: float):
         if st.recent > 0.5:
             msg += f" (≈{med / st.recent:.1f}×)"
     msg += "."
-    caveat = ("Uses each day's ERA5 maximum temperature at standard pressure — the worst departure of "
+    caveat = ("Uses each day's ERA5 maximum temperature at standard pressure - the worst departure of "
               "the day; cooler-hour departures fare better. Projections: CMIP6 HighResMIP, high-emissions, "
               "to 2050, multi-model median with min–max range.")
     if note:
@@ -635,7 +635,7 @@ def cmd_aircraft(ctx: Context, args: list[str]) -> CommandResult:
     view = page(panel(Group(table, Text(""), Text(
         "* takeoff field length at MTOW, sea level, ISA. ≈ = a value could not be confirmed in a "
         "manufacturer document (sources in perf/aircraft.toml). ◀ = session default.", style="est")),
-        "✈ Aircraft types"), hints=["aircraft A320neo", "takeoff PHX"])
+        "Aircraft types"), hints=["aircraft A320neo", "takeoff PHX"])
     return CommandResult(view, data=data, name="aircraft")
 
 
@@ -671,7 +671,7 @@ def cmd_update(ctx: Context, args: list[str]) -> CommandResult:
 
 
 def _compare_column(ctx: Context, idx: int, ac) -> dict[str, Any]:
-    """All compare values for one airport; anything unavailable is None (shown as —)."""
+    """All compare values for one airport; anything unavailable is None (shown as -)."""
     from skyscope.climate.metrics import heat_summary, restricted_days
     from skyscope.climate.projections import delta_projection
     from skyscope.perf.takeoff import threshold_temp

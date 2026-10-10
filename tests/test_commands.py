@@ -109,7 +109,7 @@ def test_vs_missing_data_shows_dash(store) -> None:
     RUNTIME.offline = True
     ctx = make_ctx(store)
     res = run_line(ctx, "vs PHX 00A")  # heliport: no takeoff/climate rows
-    assert res is not None and "—" in output(ctx)
+    assert res is not None and " - " in output(ctx)
 
 
 def test_vs_best_index() -> None:

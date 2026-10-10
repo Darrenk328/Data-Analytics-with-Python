@@ -29,7 +29,7 @@ def header(rec: dict[str, Any], utc_offset_s: int | None) -> Group:
     if utc_offset_s is not None:
         local = (now + timedelta(seconds=utc_offset_s)).strftime("%H:%M")
         tz = f"local {local} (UTC{utc_offset_s / 3600:+.0f})"
-    else:  # solar time from longitude — approximate
+    else:  # solar time from longitude - approximate
         local = (now + timedelta(hours=rec["lon"] / 15)).strftime("%H:%M")
         tz = f"local ≈{local} (solar)"
     # (no flag emoji: regional-indicator pairs break panel borders in some terminals)
@@ -97,13 +97,13 @@ def card(rec: dict[str, Any], wx: WxLookup, runways: list[dict[str, Any]], activ
     m: Metar | None = wx.metar
     code = rec.get("code") or rec["ident"]
     top = panel(Group(header(rec, utc_offset_s), Text(""), Text("Right now", style="accent"),
-                      weather_block(wx, units, da_ft)), f"✈ {code} · Airport card")
+                      weather_block(wx, units, da_ft)), f"{code} · Airport card")
     takeoff = panel(takeoff_line or Text("Performance not modelled here.", style="muted"),
                     f"Takeoff today{' · ' + aircraft_label if aircraft_label else ''}", "≈ estimate")
     rw_body: RenderableType = (runways_table(runways, units, active, (m.wind_dir, m.wind_kt) if m else (None, None))
                                if runways else Text("No runway data.", style="muted"))
     rw = panel(rw_body, f"Runways ({len(runways)})", "wind: + head / − tail, cross (kt)")
-    climate = panel(climate_line, "☀ Climate", "ERA5") if climate_line is not None else None
+    climate = panel(climate_line, "Climate", "ERA5") if climate_line is not None else None
     return page(top, takeoff, rw, climate, hints=[f"takeoff {code}", f"heat {code}", f"wx {code}"])
 
 

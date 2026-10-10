@@ -122,11 +122,11 @@ def run_shell(ctx: Context) -> None:
         run_line(ctx, line)
         log.info("ran %r in %.2fs", line, time.perf_counter() - t0)
         ctx.console.print()
-    ctx.console.print(Text("Clear skies. ✈", style="muted"))
+    ctx.console.print(Text("Clear skies.", style="muted"))
 
 
 def _prompt_html(ctx: Context):
-    """skyscope  PHX  737-800 ›  — airport in sky blue, aircraft as an orange badge."""
+    """skyscope  PHX  737-800 ›  - airport in sky blue, aircraft as an orange badge."""
     from prompt_toolkit.formatted_text import HTML
 
     from skyscope.views.theme import SKY, SUN

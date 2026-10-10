@@ -40,13 +40,13 @@ def compare_view(codes: list[str], names: list[str], rows: list[Row], verdict: s
     parts: list[RenderableType] = [table, Text("")]
     parts += [Text(n, style="muted") for n in notes]
     parts.append(Text(verdict, style="bold"))
-    return page(panel(Group(*parts), f"⇄ Compare · {' vs '.join(codes)} · {aircraft_name}",
+    return page(panel(Group(*parts), f"Compare · {' vs '.join(codes)} · {aircraft_name}",
                       "green = best in row · ≈ estimates"),
                 hints=[f"takeoff {codes[0]} --decades", f"heat {codes[-1]}", f"open {codes[0]}"])
 
 
 def cell(value: float | None, render) -> str:
-    """Format a value or —."""
+    """Format a value or -."""
     return fmt.DASH if value is None else render(value)
 
 

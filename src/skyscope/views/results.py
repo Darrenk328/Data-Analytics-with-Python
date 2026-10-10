@@ -26,14 +26,14 @@ def results_view(records: list[dict[str, Any]], title: str, breadcrumb: list[str
         for i, step in enumerate(breadcrumb):
             if i:
                 crumb.append("  ›  ", style="muted")
-            crumb.append(step, style="cyan")
+            crumb.append(step, style="white")
         parts.append(crumb)
     if not records:
         parts.append(Text("No airports match.", style="warn"))
     else:
         parts.append(Responsive(lambda width: _table(records, units, distance, width)))
         if total > len(records):
-            parts.append(Text(f"… and {fmt.num(total - len(records))} more — narrow it with "
+            parts.append(Text(f"… and {fmt.num(total - len(records))} more - narrow it with "
                               "filter, e.g. filter type=large", style="muted"))
     return page(panel(Group(*parts), f"{title} · {fmt.plural(total, 'airport')}"), hints=hints)
 
