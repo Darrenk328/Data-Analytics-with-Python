@@ -1,0 +1,107 @@
+# SkyScope aircraft table — inputs to an EDUCATIONAL takeoff model, not flight-manual data.
+#
+# Fields
+#   mtow_kg         maximum takeoff weight
+#   oew_kg          operating empty weight (typical)
+#   max_payload_kg  structural max payload (MZFW − OEW unless published directly)
+#   tofl_ref_m      takeoff field length at MTOW, sea level, ISA, dry runway
+#   flat_rate_dc    engines hold full thrust up to ISA + this many °C (MODEL ASSUMPTION)
+#   thrust_lapse    fraction of thrust lost per °C above the flat-rating point (MODEL ASSUMPTION)
+#   max_oat_c       max certified takeoff temperature — omitted: none could be confirmed
+#   approx = true   at least one weight/length value could not be confirmed in a source
+#                   document; the UI shows "≈" next to that type's results.
+#
+# flat_rate_dc / thrust_lapse are the plan's documented defaults (15 °C, 1 %/°C) for every
+# type; they are modelling assumptions, not manufacturer numbers. Research notes behind each
+# row are in the comments; see also NOTES.md.
+
+[[aircraft]]
+id = "ATR72-600"
+name = "ATR 72-600"
+aliases = ["atr", "atr72", "atr-72", "atr 72"]
+category = "turboprop"
+mtow_kg = 23000
+oew_kg = 13750
+max_payload_kg = 7250
+tofl_ref_m = 1304
+flat_rate_dc = 15.0
+thrust_lapse = 0.01
+approx = false
+source = "ATR 72-600 brochure (atr-aircraft.com, 72-600 brochure p.2), PW127XT-M"
+# MZFW 21,000 kg; payload = MZFW − OEW. Older PW127M sheets: TOFL 1,333–1,367 m.
+
+[[aircraft]]
+id = "E175"
+name = "Embraer E175 LR"
+aliases = ["e175", "erj175", "embraer", "e-175", "175"]
+category = "regional"
+mtow_kg = 38790
+oew_kg = 21886
+max_payload_kg = 9814
+tofl_ref_m = 1724
+flat_rate_dc = 15.0
+thrust_lapse = 0.01
+approx = false
+source = "Embraer E175 specification sheet (embraer.com, Weights/Performance table), LR, CF34-8E5"
+# OEW = basic operating weight (std). AR version: MTOW 40,370 kg, TOFL 2,244 m.
+
+[[aircraft]]
+id = "A320neo"
+name = "Airbus A320neo"
+aliases = ["a320", "a320n", "320", "320neo", "a20n"]
+category = "narrowbody"
+mtow_kg = 79000
+oew_kg = 44300
+max_payload_kg = 20000
+tofl_ref_m = 1970
+flat_rate_dc = 15.0
+thrust_lapse = 0.01
+approx = true
+source = "Airbus 'Aircraft Characteristics – Airport and Maintenance Planning' A320 Rev 44 (Jun 2024) §2-1-1 WV055 & Fig 3-3-1 (LEAP-1A); OEW/payload via Airbus Family Figures (Wikipedia)"
+# MTOW/MZFW sourced in the AC; TOFL read off the AC's ISA chart (±40 m) → approx.
+
+[[aircraft]]
+id = "737-800"
+name = "Boeing 737-800"
+aliases = ["737", "b737", "b738", "738", "b737-800", "737800"]
+category = "narrowbody"
+mtow_kg = 79016
+oew_kg = 41413
+max_payload_kg = 21319
+tofl_ref_m = 2316
+flat_rate_dc = 15.0
+thrust_lapse = 0.01
+approx = true
+source = "Boeing 737 'Airplane Characteristics for Airport Planning' via Wikipedia 737NG tables (MTOW, OEW, TOFL); MZFW from Boeing 737 airport compatibility brochure"
+# CFM56-7B26/27. TOFL 7,598 ft is quoted for 'MTOW, SL, ISA+20 °C', so the ISA value is
+# likely lower — treat as conservative. Payload = MZFW 62,732 − OEW.
+
+[[aircraft]]
+id = "787-9"
+name = "Boeing 787-9"
+aliases = ["787", "b787", "b789", "789", "dreamliner"]
+category = "widebody"
+mtow_kg = 254011
+oew_kg = 128850
+max_payload_kg = 52587
+tofl_ref_m = 2800
+flat_rate_dc = 15.0
+thrust_lapse = 0.01
+approx = true
+source = "Boeing 787 'Airplane Characteristics for Airport Planning' via Wikipedia 787 table (OEW, payload); ICAO MID 2022 'Aircraft and Airport Compatibility' (reference field length)"
+# MTOW 560,000 lb baseline (a 571,500 lb option exists). TOFL 9,186 ft at max taxi weight.
+
+[[aircraft]]
+id = "777-300ER"
+name = "Boeing 777-300ER"
+aliases = ["777", "b777", "b77w", "77w", "777-300", "triple seven"]
+category = "widebody"
+mtow_kg = 351533
+oew_kg = 167829
+max_payload_kg = 69853
+tofl_ref_m = 3120
+flat_rate_dc = 15.0
+thrust_lapse = 0.01
+approx = true
+source = "Boeing 777-200LR/-300ER 'Airplane Characteristics for Airport Planning' via Wikipedia 777 tables (MTOW, OEW); ICAO MID 2022 deck (reference field length)"
+# GE90-115BL. Published TOFL figures range 3,050–3,215 m. Payload = MZFW 237,682 − OEW.

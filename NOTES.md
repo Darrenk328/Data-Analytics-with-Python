@@ -47,3 +47,21 @@ Each entry: what the plan assumed → what reality is → what SkyScope does.
   after `pip install -e .`. Fix: `chflags nohidden .venv/lib/python3.*/site-packages/*.pth`.
   The flag is re-applied by the OS (the Desktop folder is synced), so for development here
   commands are run with `PYTHONPATH=src`; pytest sets `pythonpath = ["src"]` itself.
+
+## Aircraft table
+
+- Values were researched from manufacturer documents where readable (ATR 72-600 brochure,
+  Embraer E175 spec sheet, Airbus A320 "Aircraft Characteristics" Rev 44). The Boeing
+  airport-planning PDFs were too large to read in this environment, so Boeing weights and
+  field lengths come from published spec tables that cite those documents (Wikipedia,
+  ICAO/Boeing presentations) and are marked `approx = true` (shown as "≈" in the UI).
+- The 737-800's 2,316 m field length is quoted for ISA+20 °C, so it likely overstates the ISA
+  figure; SkyScope keeps it (conservative) and says so in `aircraft.toml` and `explain takeoff`.
+- No maximum certified takeoff temperature could be confirmed for any type, so `max_oat_c` is
+  omitted and the ABOVE LIMIT status never triggers with the current table.
+- `flat_rate_dc` (15 °C) and `thrust_lapse` (1 %/°C) are the plan's model assumptions for every
+  type, not manufacturer data.
+- Thrust ∝ δ makes high-elevation airports very restrictive for big jets (e.g. a full
+  777-300ER is restricted at any temperature at Mexico City). That matches the direction of
+  real-world operations (MEX/BOG/LPB long-haul departures are weight-limited), but the exact
+  numbers are estimates.
