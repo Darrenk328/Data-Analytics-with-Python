@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from rich.text import Text
@@ -99,6 +100,23 @@ def dispatch(ctx: Context, line: str) -> CommandResult | None:
     if result is not None and result.data is not None:
         ctx.last = result
     return result
+
+
+def _save_plot(make) -> tuple[Text, str | None]:
+    """Run a plot function; return (message line, path or None). Never raises for missing matplotlib."""
+    from skyscope.plots import PlotUnavailable
+
+    try:
+        path = make()
+    except PlotUnavailable as exc:
+        return Text(f"Plot not saved: {exc}", style="warn"), None
+    except OSError as exc:
+        return Text(f"Plot not saved: couldn't write the file ({exc})", style="warn"), None
+    try:
+        shown = path.relative_to(Path.cwd())
+    except ValueError:
+        shown = path
+    return Text(f"Plot saved → {shown}", style="green"), str(path)
 
 
 # --------------------------------------------------------------------------- explore
@@ -387,9 +405,10 @@ def cmd_runways(ctx: Context, args: list[str]) -> CommandResult:
 
 
 @command("takeoff", "Could a full aircraft take off here? (live or --temp)",
-         "takeoff [code] [--aircraft ID] [--runway ID] [--temp C] [--sweep] [--decades]",
-         ["takeoff PHX", "takeoff PHX --temp 48", "takeoff DEN --aircraft A320neo",
-          "takeoff PHX --sweep", "takeoff PHX --decades", "to LPB --runway 10"],
+         "takeoff [code] [--aircraft ID] [--runway ID] [--temp C] [--sweep] [--decades [--plot]]",
+         ["takeoff PHX", "takeoff PHX --temp 48", "takeoff DFW --aircraft A320neo",
+          "takeoff PHX --sweep", "takeoff PHX --decades", "takeoff PHX --aircraft 787-9 --decades --plot",
+          "to PHX --runway 07L"],
          aliases=("to",), category="Heat & takeoff",
          details="Uses the live METAR temperature and altimeter (or --temp), the longest open "
                  "paved runway (or --runway) and the session aircraft (or --aircraft). Results "
@@ -409,7 +428,9 @@ def cmd_takeoff(ctx: Context, args: list[str]) -> CommandResult:
     )
 
     pos, opts = parse_args(args, {"aircraft": str, "runway": str, "temp": float, "sweep": None,
-                                  "decades": None})
+                                  "decades": None, "plot": None})
+    if opts.get("plot") and not opts.get("decades"):
+        raise UserError("--plot works with --decades", "e.g. takeoff PHX --decades --plot")
     idx = resolve_airport(ctx, pos[0] if pos else None)
     ctx.airport_idx = idx
     rec = airport_record(ctx, idx)
@@ -447,6 +468,17 @@ def cmd_takeoff(ctx: Context, args: list[str]) -> CommandResult:
         data["sweep"] = [{"oat_c": t, "allowable_kg": round(w), "passengers_lost": round(p, 1)} for t, w, p in srows]
     if opts.get("decades"):
         extra, data["decades"] = _decades(ctx, rec, ac, runway_m)
+        if opts.get("plot"):
+            from rich.console import Group
+
+            from skyscope.plots import plot_decades
+
+            dd = data["decades"]
+            periods = list(dd["decades"].items()) + [("1996–2025", dd["recent_1996_2025"])]
+            proj = dd["projected_2031_2050"]
+            triple = (proj["median"], *proj["range"]) if proj["median"] is not None else None
+            msg, data["plot"] = _save_plot(lambda: plot_decades(rec["code"], ac.name, ac.id, periods, triple))
+            extra = Group(extra, msg)
     code = rec["code"]
     hints = [f"takeoff {code} --sweep", f"takeoff {code} --decades", f"heat {code}"]
     view = takeoff_page(headline(code, ac, res, ctx.units, today),
@@ -504,15 +536,15 @@ def _decades(ctx: Context, rec: dict[str, Any], ac, runway_m: float):
     return decades_view(rows, msg, caveat), data
 
 
-@command("heat", "85 years of heat history + 2050 projection", "heat [code]",
-         ["heat PHX", "heat DXB", "heat"], aliases=("climate",), category="Heat & takeoff")
+@command("heat", "85 years of heat history + 2050 projection", "heat [code] [--plot]",
+         ["heat PHX", "heat DOH", "heat PHX --plot", "heat"], aliases=("climate",), category="Heat & takeoff")
 def cmd_heat(ctx: Context, args: list[str]) -> CommandResult:
     import numpy as np
 
     from skyscope.climate.metrics import add_projection, heat_summary
     from skyscope.views.heat_view import heat_view
 
-    pos, _ = parse_args(args, {})
+    pos, opts = parse_args(args, {"plot": None})
     idx = resolve_airport(ctx, pos[0] if pos else None)
     ctx.airport_idx = idx
     rec = airport_record(ctx, idx)
@@ -528,8 +560,20 @@ def cmd_heat(ctx: Context, args: list[str]) -> CommandResult:
             "record_c": summary.record_c, "record_date": summary.record_date,
             "warm_season_tmax_by_year": summary.warm, "projected_warm_season_median": summary.projected_warm,
             "projected_warming_by_model": summary.projected_warming, "source": "ERA5 via Open-Meteo; CMIP6 HighResMIP"}
-    return CommandResult(heat_view(rec["code"], rec["name"], summary, ctx.units, note), data=data,
-                         name=f"heat_{rec['code']}")
+    view = heat_view(rec["code"], rec["name"], summary, ctx.units, note)
+    if opts.get("plot"):
+        import calendar
+
+        from rich.console import Group
+
+        from skyscope.plots import plot_heat
+
+        months = "–".join(calendar.month_abbr[m] for m in (summary.months[0], summary.months[2]))
+        msg, data["plot"] = _save_plot(lambda: plot_heat(
+            rec["code"], rec["name"], summary.warm, summary.baseline, summary.trend.slope_per_decade,
+            summary.projected_warm, months, ctx.units))
+        view = Group(view, msg)
+    return CommandResult(view, data=data, name=f"heat_{rec['code']}")
 
 
 @command("aircraft", "List aircraft types, or set the session default", "aircraft [id]",

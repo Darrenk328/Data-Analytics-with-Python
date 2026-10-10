@@ -11,3 +11,4 @@ dist/
 # raw uncompressed data never committed
 *.csv
 !tests/fixtures/*.csv
+plots/

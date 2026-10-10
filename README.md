@@ -64,6 +64,8 @@ skyscope › aircraft A320neo           # change the session aircraft
 | `takeoff PHX --temp 48 --sweep` | What-if temperature and sweep chart |
 | `takeoff PHX --aircraft 787-9 --decades` | Restricted days/yr: 1940s → 1996–2025 → 2031–2050 (median + model range) |
 | `heat DOH` | Heat history and projection |
+| `heat PHX --plot` | Save a Matplotlib chart: warm-season max by year, trend line, 1951–1980 baseline, projection |
+| `takeoff PHX --aircraft 787-9 --decades --plot` | Save a Matplotlib bar chart of restricted days/yr, with the 2031–2050 model range as an error bar |
 | `vs PHX DOH DFW` | Side-by-side comparison: best value per row in green, one-line verdict |
 | `vs PHX DFW --aircraft 787-9` | Compare for a different aircraft type |
 | `aircraft` | Aircraft table with sources (≈ = not confirmed in a manufacturer document) |
@@ -78,6 +80,21 @@ skyscope heat DOH
 skyscope filter "elevation>6000 type=large" --json
 skyscope update     # refresh airports + METARs from the network
 ```
+
+## Charts (Matplotlib)
+
+Add `--plot` to `heat` or `takeoff --decades` to save a PNG to `./plots/`; SkyScope prints
+the path. Every chart has a title, axes labelled with units, a legend and a source footnote.
+
+```text
+skyscope › heat PHX --plot
+Plot saved → plots/heat_PHX.png
+skyscope › takeoff PHX --aircraft 787-9 --decades --plot
+Plot saved → plots/decades_PHX_787-9.png
+```
+
+Matplotlib is installed with SkyScope. If it's missing, the command still runs and prints
+how to install it.
 
 ## How the model works (short version)
 
@@ -151,5 +168,5 @@ Either:
 
 Phases 0–5 of `PLAN.md` are built: data layer, search and filters, the shell, the
 performance model, live weather, the airport card, takeoff verdicts and sweep, and climate
-history with projections, plus `vs` (compare). Hotspots, rank, map, explain, export and
+history with projections, plus `vs` (compare) and Matplotlib chart export (`--plot`). Hotspots, rank, map, explain, export and
 the tour (Phases 6–7) are not built yet.
