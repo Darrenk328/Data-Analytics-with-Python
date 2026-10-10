@@ -47,8 +47,8 @@ skyscope › takeoff --decades          # restricted days/yr per decade → 2031
 skyscope › aircraft A320neo           # change the session aircraft
 ```
 
-"Could a full 737 take off from Denver today, and how often will it be restricted by the
-2040s?" takes one command: `takeoff DEN --decades`.
+"Could a full 737 take off from Phoenix today, and how often will it be restricted by the
+2040s?" takes one command: `takeoff PHX --decades`.
 
 ## Example commands
 
@@ -59,11 +59,11 @@ skyscope › aircraft A320neo           # change the session aircraft
 | `filter type=big runway>=4km elevation>2000m` | Friendly units and aliases |
 | `open PHX` | Airport card |
 | `wx KPHX` | Decoded METAR + TAF |
-| `runways DEN` | Runways with headwind/crosswind components |
+| `runways DFW` | Runways with headwind/crosswind components |
 | `takeoff PHX --aircraft 787-9 --runway 07L` | Verdict for a specific type and runway, plus all six types |
 | `takeoff PHX --temp 48 --sweep` | What-if temperature and sweep chart |
-| `takeoff DEN --decades` | Restricted days/yr: 1940s → 1996–2025 → 2031–2050 (median + model range) |
-| `heat DXB` | Heat history and projection |
+| `takeoff PHX --aircraft 787-9 --decades` | Restricted days/yr: 1940s → 1996–2025 → 2031–2050 (median + model range) |
+| `heat DOH` | Heat history and projection |
 | `aircraft` | Aircraft table with sources (≈ = not confirmed in a manufacturer document) |
 | `units imperial` | °F / ft / lb |
 
@@ -72,7 +72,7 @@ machine-readable output:
 
 ```bash
 skyscope takeoff PHX --aircraft 737-800 --json
-skyscope heat DXB
+skyscope heat DOH
 skyscope filter "elevation>6000 type=large" --json
 skyscope update     # refresh airports + METARs from the network
 ```
@@ -104,6 +104,29 @@ ruff check .
 python scripts/make_snapshot.py               # rebuild bundled data (network)
 python scripts/make_snapshot.py --only-climate --no-cmip6
 ```
+
+## Troubleshooting
+
+**`ModuleNotFoundError: No module named 'skyscope'` on macOS after `pip install -e .`**
+
+If the project is in a synced folder (Desktop or Documents with iCloud), macOS can mark the
+venv's editable-install `.pth` file as hidden, and Python 3.14+ skips hidden `.pth` files.
+Either:
+
+- run with the source folder on the path:
+
+  ```bash
+  PYTHONPATH=src python -m skyscope
+  ```
+
+- or create the venv outside the Desktop/iCloud folder:
+
+  ```bash
+  python -m venv ~/venvs/skyscope
+  ~/venvs/skyscope/bin/pip install -e .
+  ```
+
+  Then activate it with `source ~/venvs/skyscope/bin/activate`.
 
 ## Data credits
 
