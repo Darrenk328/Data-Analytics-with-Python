@@ -23,8 +23,7 @@ def launch_view(n_airports: int, weather_note: str | None, headline: Text | None
     parts += [
         Text.assemble(("  Try:  ", "muted"), ("open PHX", "cyan"), ("  ·  ", "muted"),
                       ("takeoff PHX", "cyan"), ("  ·  ", "muted"), ("heat PHX", "cyan"),
-                      ("  ·  ", "muted"), ("rank heat-risk", "cyan"), ("  ·  ", "muted"),
-                      ("tour", "cyan")),
+                      ("  ·  ", "muted"), ("takeoff DEN --decades", "cyan")),
         Text("  help for all commands · Tab to autocomplete · ↑ for history", style="muted"),
         Text(""),
     ]

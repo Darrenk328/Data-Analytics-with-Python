@@ -35,7 +35,7 @@ def help_overview(commands: list) -> RenderableType:
             table.add_row(cmd.name, cmd.summary, alias)
         parts.append(table)
     parts.append(Text(""))
-    parts.append(hint_line(["help takeoff", "tour", "explain takeoff"]))
+    parts.append(hint_line(["help takeoff", "open PHX", "aircraft"]))
     return Group(*parts)
 
 

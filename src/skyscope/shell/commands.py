@@ -393,7 +393,7 @@ def cmd_runways(ctx: Context, args: list[str]) -> CommandResult:
          aliases=("to",), category="Heat & takeoff",
          details="Uses the live METAR temperature and altimeter (or --temp), the longest open "
                  "paved runway (or --runway) and the session aircraft (or --aircraft). Results "
-                 "are educational estimates — see `explain takeoff`.")
+                 "are educational estimates — see the README and NOTES.md.")
 def cmd_takeoff(ctx: Context, args: list[str]) -> CommandResult:
     import numpy as np
 
@@ -562,8 +562,8 @@ def cmd_aircraft(ctx: Context, args: list[str]) -> CommandResult:
     from skyscope.views.theme import hint_line
 
     view = Group(table, Text("* takeoff field length at MTOW, sea level, ISA. ≈ = a value could not be "
-                             "confirmed in a manufacturer document (see explain takeoff).", style="muted"),
-                 hint_line(["aircraft A320neo", "explain takeoff"]))
+                             "confirmed in a manufacturer document (sources in perf/aircraft.toml).", style="muted"),
+                 hint_line(["aircraft A320neo", "takeoff PHX"]))
     return CommandResult(view, data=data, name="aircraft")
 
 

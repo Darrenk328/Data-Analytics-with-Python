@@ -65,3 +65,17 @@ Each entry: what the plan assumed → what reality is → what SkyScope does.
   777-300ER is restricted at any temperature at Mexico City). That matches the direction of
   real-world operations (MEX/BOG/LPB long-haul departures are weight-limited), but the exact
   numbers are estimates.
+
+## Snapshot coverage (time-boxed build)
+
+- Open-Meteo rate-limited the snapshot build (HTTP 429 on both the archive and climate APIs;
+  85-year and multi-model requests count as many "calls"). The build was time-boxed, so the
+  bundled snapshot holds **ERA5 history for 8 showcase airports** (PHX, DFW, IAH, DXB, DOH,
+  KWI, DEL, BKK) and **CMIP6 projections for 3** (PHX, DFW, DOH). Every other airport,
+  including the rest of the showcase list, downloads on first use and is then cached.
+  Re-run `python scripts/make_snapshot.py --only-climate` later to fill in the rest; existing
+  files are kept.
+- plotext isn't used. Charts are pure-Rich bar tables, which behave the same at 80 columns
+  and with NO_COLOR.
+- Phases 6–7 (hotspots, rank, vs, map, explain, export, favourites, near, tour) were not
+  built in this session.

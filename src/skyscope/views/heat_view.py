@@ -98,7 +98,7 @@ def heat_view(code: str, name: str, s: HeatSummary, units: str, proj_note: str |
     if proj_note:
         parts.append(Text(proj_note, style="warn"))
     parts += [Text(CAVEAT, style="muted"), hint_line([f"takeoff {code} --decades", f"takeoff {code} --sweep",
-                                                       "explain climate"])]
+                                                       f"open {code}"])]
     return Group(*parts)
 
 

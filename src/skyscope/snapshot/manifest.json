@@ -4,6 +4,22 @@
     "runways.csv.gz": "2026-10-10T17:54:23Z",
     "countries.csv.gz": "2026-10-10T17:54:23Z",
     "regions.csv.gz": "2026-10-10T17:54:23Z",
-    "metars.cache.csv.gz": "2026-10-10T17:54:23Z"
-  }
+    "metars.cache.csv.gz": "2026-10-10T17:54:23Z",
+    "climate": "2026-10-10T18:15:27Z"
+  },
+  "climate_airports": [
+    "KDFW",
+    "KIAH",
+    "KPHX",
+    "OKKK",
+    "OMDB",
+    "OTHH",
+    "VIDP",
+    "VTBS"
+  ],
+  "cmip6_airports": [
+    "KDFW",
+    "KPHX",
+    "OTHH"
+  ]
 }

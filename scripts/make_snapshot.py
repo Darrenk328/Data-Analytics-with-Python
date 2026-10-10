@@ -58,9 +58,8 @@ def build_metars(manifest: dict) -> None:
 
 def build_climate(manifest: dict, with_cmip6: bool = True) -> None:
     """Fetch ERA5 history and CMIP6 projections for the showcase airports."""
-    from skyscope.data.store import get_store
-
     from skyscope.climate import history, projections
+    from skyscope.data.store import get_store
 
     store = get_store()
     climate_dir = SNAPSHOT_DIR / "climate"
